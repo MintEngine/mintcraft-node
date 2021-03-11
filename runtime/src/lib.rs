@@ -267,6 +267,8 @@ impl pallet_template::Config for Runtime {
 
 impl pallet_nft::Config for Runtime {
 	type Event = Event;
+	type TokenId = u64;
+	type Currency = Balances;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

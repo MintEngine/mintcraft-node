@@ -22,6 +22,7 @@ use frame_support::{
 use sp_runtime::{
 	traits::{Bounded, Member, Zero, CheckedAdd, CheckedSub},
 };
+use sp_arithmetic::traits::BaseArithmetic;
 use frame_system::ensure_signed;
 
 use sp_std::vec::Vec;
@@ -40,8 +41,7 @@ pub trait Config: frame_system::Config {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 	
-	//type TokenId: Parameter + Member + SimpleArithmetic + Bounded + Default + Copy;
-	type TokenId: From<i32> + Parameter + Member + Bounded + Default + Copy + Into<u64> + CheckedAdd + CheckedSub;
+	type TokenId: Parameter + Member + BaseArithmetic + Bounded + Default + Copy + Into<u64>;
 
 	type Currency: Currency<Self::AccountId>;
 }
