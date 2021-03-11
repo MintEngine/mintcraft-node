@@ -3474,13 +3474,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "node-template"
+name = "mintcraft"
 version = "3.0.0"
 dependencies = [
  "frame-benchmarking",
  "frame-benchmarking-cli",
  "jsonrpc-core",
- "node-template-runtime",
+ "mintcraft-runtime",
  "pallet-transaction-payment-rpc",
  "sc-basic-authorship",
  "sc-cli",
@@ -3510,7 +3510,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "node-template-runtime"
+name = "mintcraft-runtime"
 version = "3.0.0"
 dependencies = [
  "frame-benchmarking",
