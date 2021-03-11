@@ -1,6 +1,6 @@
 [package]
 name = 'mintcraft-runtime'
-version = '3.0.0'
+version = '0.1.0'
 authors = ['Tang Bo Hao<tech@btang.cn>','Yin Nan']
 edition = '2018'
 license = 'MIT'
