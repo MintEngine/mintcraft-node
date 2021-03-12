@@ -1,11 +1,12 @@
 use sp_std::vec::Vec;
 use frame_support::{Parameter,  traits::Currency, dispatch::DispatchResult};
 use sp_runtime::traits::{Bounded, Member};
+use sp_arithmetic::traits::BaseArithmetic;
 
 use crate::linked_item::{LinkedItem};
 
 pub trait NFTCurrency<AccountId> {
-	type TokenId: Parameter + Member + Bounded + Default + Copy + Into<u64>;
+	type TokenId: Parameter + Member + BaseArithmetic + Bounded + Default + Copy + Into<u64>;
 
 	type Currency: Currency<AccountId>;
 
