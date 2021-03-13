@@ -1,5 +1,5 @@
 [package]
-name = 'pallet-template'
+name = 'pallet-featured-assets'
 version = '0.1.0'
 authors = ['Tang Bo Hao<tech@btang.cn>']
 description = 'FRAME pallet.'
