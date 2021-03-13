@@ -1,8 +1,8 @@
 [package]
-name = 'mc-featured-assets'
+name = 'mc-dungeons'
 version = '0.1.0'
 authors = ['Tang Bo Hao<tech@btang.cn>']
-description = 'Mintcraft pallet of featured assets'
+description = 'Mintcraft pallet of dungeons'
 edition = '2018'
 license = 'MIT'
 homepage = 'https://substrate.dev'

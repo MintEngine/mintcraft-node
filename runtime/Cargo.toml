@@ -20,18 +20,18 @@ features = ['derive']
 package = 'parity-scale-codec'
 version = '2.0.0'
 
-# local dependencies
-[dependencies.pallet-featured-assets]
-default-features = false
-path = '../pallets/featured-assets'
-
-[dependencies.pallet-nft]
-default-features = false
-path = '../pallets/nft'
-
 [dependencies]
 hex-literal = { optional = true, version = '0.3.1' }
 serde = { features = ['derive'], optional = true, version = '1.0.119' }
+
+# Local dependencies
+mc-nft = { default-features = false, path = '../pallets/nft' }
+mc-featured-assets = { default-features = false, path = '../pallets/featured-assets' }
+mc-actor = { default-features = false, path = '../pallets/actor' }
+mc-implication = { default-features = false, path = '../pallets/implication' }
+mc-cultivate = { default-features = false, path = '../pallets/cultivate' }
+mc-nature = { default-features = false, path = '../pallets/nature' }
+mc-dungeons = { default-features = false, path = '../pallets/dungeons' }
 
 # Substrate dependencies
 frame-benchmarking = { default-features = false, optional = true, version = '3.0.0' }
@@ -101,4 +101,12 @@ std = [
     'sp-std/std',
     'sp-transaction-pool/std',
     'sp-version/std',
+    # Local
+    'mc-nft/std',
+    'mc-featured-assets/std',
+    'mc-actor/std',
+    'mc-implication/std',
+    'mc-cultivate/std',
+    'mc-nature/std',
+    'mc-dungeons/std',
 ]

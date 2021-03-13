@@ -41,9 +41,14 @@ use pallet_transaction_payment::CurrencyAdapter;
 pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
-pub use pallet_nft;
-/// Import the template pallet.
-pub use pallet_featured_assets;
+/// Import local pallets.
+pub use mc_featured_assets;
+pub use mc_nft;
+pub use mc_actor;
+pub use mc_cultivate;
+pub use mc_implication;
+pub use mc_nature;
+pub use mc_dungeons;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -259,15 +264,30 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
-/// Configure the template pallet in pallets/template.
-impl pallet_featured_assets::Config for Runtime {
-	type Event = Event;
-}
-
-impl pallet_nft::Config for Runtime {
+/// Configure all local pallets in ../pallets.
+impl mc_nft::Config for Runtime {
 	type Event = Event;
 	type TokenId = u64;
 	type Currency = Balances;
+}
+
+impl mc_featured_assets::Config for Runtime {
+	type Event = Event;
+}
+impl mc_actor::Config for Runtime {
+	type Event = Event;
+}
+impl mc_implication::Config for Runtime {
+	type Event = Event;
+}
+impl mc_cultivate::Config for Runtime {
+	type Event = Event;
+}
+impl mc_nature::Config for Runtime {
+	type Event = Event;
+}
+impl mc_dungeons::Config for Runtime {
+	type Event = Event;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
@@ -286,8 +306,13 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		// Include the custom logic from the template pallet in the runtime.
-		FeaturedAssetsModule: pallet_featured_assets::{Module, Call, Storage, Event<T>},
-		NftModule: pallet_nft::{Module, Call, Storage, Event<T>},
+		NftModule: mc_nft::{Module, Call, Storage, Event<T>},
+		FeaturedAssetsModule: mc_featured_assets::{Module, Call, Storage, Event<T>},
+		ActorModule: mc_actor::{Module, Call, Storage, Event<T>},
+		ImplicationModule: mc_implication::{Module, Call, Storage, Event<T>},
+		CultivateModule: mc_cultivate::{Module, Call, Storage, Event<T>},
+		NatureModule: mc_nature::{Module, Call, Storage, Event<T>},
+		DungeonsModule: mc_dungeons::{Module, Call, Storage, Event<T>},
 	}
 );
 
