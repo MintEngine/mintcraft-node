@@ -126,8 +126,9 @@ use frame_support::{
 	traits::{Currency, ReservableCurrency, BalanceStatus::Reserved},
 	dispatch::DispatchError,
 };
-pub use weights::WeightInfo;
+use mc_support::traits::{ModuleAccessor};
 
+pub use weights::WeightInfo;
 pub use pallet::*;
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -182,6 +183,9 @@ pub mod pallet {
 
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
+
+		/// Featured Getters
+		type AssetAdmin: ModuleAccessor<Self::AccountId>;
 	}
 
 	#[pallet::hooks]
@@ -216,12 +220,11 @@ pub mod pallet {
 		pub(super) fn create(
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::AssetId,
-			admin: <T::Lookup as StaticLookup>::Source,
 			max_zombies: u32,
 			min_balance: T::Balance,
 		) -> DispatchResultWithPostInfo {
 			let owner = ensure_signed(origin)?;
-			let admin = T::Lookup::lookup(admin)?;
+			let admin = T::AssetAdmin::get_owner_id();
 
 			ensure!(!Asset::<T>::contains_key(id), Error::<T>::InUse);
 			ensure!(!min_balance.is_zero(), Error::<T>::MinBalanceZero);
@@ -773,31 +776,31 @@ pub mod pallet {
 		/// Emits `TeamChanged`.
 		///
 		/// Weight: `O(1)`
-		#[pallet::weight(T::WeightInfo::set_team())]
-		pub(super) fn set_team(
-			origin: OriginFor<T>,
-			#[pallet::compact] id: T::AssetId,
-			issuer: <T::Lookup as StaticLookup>::Source,
-			admin: <T::Lookup as StaticLookup>::Source,
-			freezer: <T::Lookup as StaticLookup>::Source,
-		) -> DispatchResultWithPostInfo {
-			let origin = ensure_signed(origin)?;
-			let issuer = T::Lookup::lookup(issuer)?;
-			let admin = T::Lookup::lookup(admin)?;
-			let freezer = T::Lookup::lookup(freezer)?;
+		// #[pallet::weight(T::WeightInfo::set_team())]
+		// pub(super) fn set_team(
+		// 	origin: OriginFor<T>,
+		// 	#[pallet::compact] id: T::AssetId,
+		// 	issuer: <T::Lookup as StaticLookup>::Source,
+		// 	admin: <T::Lookup as StaticLookup>::Source,
+		// 	freezer: <T::Lookup as StaticLookup>::Source,
+		// ) -> DispatchResultWithPostInfo {
+		// 	let origin = ensure_signed(origin)?;
+		// 	let issuer = T::Lookup::lookup(issuer)?;
+		// 	let admin = T::Lookup::lookup(admin)?;
+		// 	let freezer = T::Lookup::lookup(freezer)?;
 
-			Asset::<T>::try_mutate(id, |maybe_details| {
-				let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-				ensure!(&origin == &details.owner, Error::<T>::NoPermission);
+		// 	Asset::<T>::try_mutate(id, |maybe_details| {
+		// 		let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+		// 		ensure!(&origin == &details.owner, Error::<T>::NoPermission);
 
-				details.issuer = issuer.clone();
-				details.admin = admin.clone();
-				details.freezer = freezer.clone();
+		// 		details.issuer = issuer.clone();
+		// 		details.admin = admin.clone();
+		// 		details.freezer = freezer.clone();
 
-				Self::deposit_event(Event::TeamChanged(id, issuer, admin, freezer));
-				Ok(().into())
-			})
-		}
+		// 		Self::deposit_event(Event::TeamChanged(id, issuer, admin, freezer));
+		// 		Ok(().into())
+		// 	})
+		// }
 
 		/// Set the maximum number of zombie accounts for an asset.
 		///

@@ -248,6 +248,7 @@ impl mc_featured_assets::Config for Runtime {
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type WeightInfo = mc_featured_assets::weights::SubstrateWeight<Runtime>;
+	type AssetAdmin = Nature;
 }
 
 parameter_types! {

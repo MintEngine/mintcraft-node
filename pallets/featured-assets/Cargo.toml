@@ -11,9 +11,15 @@ description = 'Mintcraft pallet of asset management.'
 [package.metadata.docs.rs]
 targets = ['x86_64-unknown-linux-gnu']
 
+# alias "parity-scale-code" to "codec"
+[dependencies.codec]
+default-features = false
+features = ['derive']
+package = 'parity-scale-codec'
+version = '2.0.0'
+
 [dependencies]
-serde = { version = '1.0.101', optional = true }
-codec = { package = 'parity-scale-codec', version = '2.0.0', default-features = false }
+serde = { version = '1.0.119', optional = true }
 sp-std = { version = '3.0.0', default-features = false }
 # Needed for various traits. In our case, `OnFinalize`.
 sp-runtime = { version = '3.0.0', default-features = false }
@@ -22,12 +28,15 @@ frame-support = { version = '3.0.0', default-features = false }
 # `system` module provides us with all sorts of useful stuff and macros depend on it being around.
 frame-system = { version = '3.0.0', default-features = false }
 frame-benchmarking = { version = '3.0.0', default-features = false, optional = true }
+# Local dependencies
+mc-support = { path = '../support' }
 
 [dev-dependencies]
 sp-core = { version = '3.0.0' }
 sp-std = { version = '3.0.0' }
 sp-io = { version = '3.0.0' }
 pallet-balances = { version = '3.0.0' }
+mc-nature = { path = '../nature' }
 
 [features]
 default = ['std']

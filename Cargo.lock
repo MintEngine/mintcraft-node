@@ -3235,6 +3235,8 @@ dependencies = [
  "frame-benchmarking",
  "frame-support",
  "frame-system",
+ "mc-nature",
+ "mc-support",
  "pallet-balances",
  "parity-scale-codec",
  "serde",
@@ -3263,6 +3265,7 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "mc-support",
  "parity-scale-codec",
  "serde",
  "sp-core",
@@ -3284,6 +3287,15 @@ dependencies = [
  "sp-externalities",
  "sp-io",
  "sp-runtime",
+ "sp-std",
+]
+
+[[package]]
+name = "mc-support"
+version = "0.1.0"
+dependencies = [
+ "parity-scale-codec",
+ "serde",
  "sp-std",
 ]
 

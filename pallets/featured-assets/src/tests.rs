@@ -1,7 +1,7 @@
 #![cfg(test)]
 
 use super::*;
-use crate as pallet_assets;
+use crate as mc_featured_assets;
 
 use frame_support::{assert_ok, assert_noop, parameter_types};
 use sp_core::H256;
@@ -19,7 +19,7 @@ frame_support::construct_runtime!(
 	{
 		System: frame_system::{Module, Call, Config, Storage, Event<T>},
 		Balances: pallet_balances::{Module, Call, Storage, Config<T>, Event<T>},
-		Assets: pallet_assets::{Module, Call, Storage, Event<T>},
+		Assets: mc_featured_assets::{Module, Call, Storage, Event<T>},
 	}
 );
 
@@ -85,6 +85,7 @@ impl Config for Test {
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type WeightInfo = ();
+	type AssetAdmin = ();
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
@@ -106,7 +107,7 @@ fn basic_minting_should_work() {
 fn lifecycle_should_work() {
 	new_test_ext().execute_with(|| {
 		Balances::make_free_balance_be(&1, 100);
-		assert_ok!(Assets::create(Origin::signed(1), 0, 1, 10, 1));
+		assert_ok!(Assets::create(Origin::signed(1), 0, 10, 1));
 		assert_eq!(Balances::reserved_balance(&1), 11);
 		assert!(Asset::<Test>::contains_key(0));
 
@@ -125,7 +126,7 @@ fn lifecycle_should_work() {
 		assert!(!Metadata::<Test>::contains_key(0));
 		assert_eq!(Account::<Test>::iter_prefix(0).count(), 0);
 
-		assert_ok!(Assets::create(Origin::signed(1), 0, 1, 10, 1));
+		assert_ok!(Assets::create(Origin::signed(1), 0, 10, 1));
 		assert_eq!(Balances::reserved_balance(&1), 11);
 		assert!(Asset::<Test>::contains_key(0));
 
@@ -324,7 +325,7 @@ fn origin_guards_should_work() {
 		assert_ok!(Assets::force_create(Origin::root(), 0, 1, 10, 1));
 		assert_ok!(Assets::mint(Origin::signed(1), 0, 1, 100));
 		assert_noop!(Assets::transfer_ownership(Origin::signed(2), 0, 2), Error::<Test>::NoPermission);
-		assert_noop!(Assets::set_team(Origin::signed(2), 0, 2, 2, 2), Error::<Test>::NoPermission);
+		// assert_noop!(Assets::set_team(Origin::signed(2), 0, 2, 2, 2), Error::<Test>::NoPermission);
 		assert_noop!(Assets::freeze(Origin::signed(2), 0, 1), Error::<Test>::NoPermission);
 		assert_noop!(Assets::thaw(Origin::signed(2), 0, 2), Error::<Test>::NoPermission);
 		assert_noop!(Assets::mint(Origin::signed(2), 0, 2, 100), Error::<Test>::NoPermission);
@@ -340,7 +341,7 @@ fn transfer_owner_should_work() {
 	new_test_ext().execute_with(|| {
 		Balances::make_free_balance_be(&1, 100);
 		Balances::make_free_balance_be(&2, 1);
-		assert_ok!(Assets::create(Origin::signed(1), 0, 1, 10, 1));
+		assert_ok!(Assets::create(Origin::signed(1), 0, 10, 1));
 
 		assert_eq!(Balances::reserved_balance(&1), 11);
 
@@ -360,7 +361,7 @@ fn transfer_owner_should_work() {
 fn set_team_should_work() {
 	new_test_ext().execute_with(|| {
 		assert_ok!(Assets::force_create(Origin::root(), 0, 1, 10, 1));
-		assert_ok!(Assets::set_team(Origin::signed(1), 0, 2, 3, 4));
+		// assert_ok!(Assets::set_team(Origin::signed(1), 0, 2, 3, 4));
 
 		assert_ok!(Assets::mint(Origin::signed(2), 0, 2, 100));
 		assert_ok!(Assets::freeze(Origin::signed(4), 0, 2));

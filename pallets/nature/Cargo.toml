@@ -22,6 +22,8 @@ version = '2.0.0'
 sp-runtime = { default-features = false, version = '3.0.0' }
 frame-support = { default-features = false, version = '3.0.0' }
 frame-system = { default-features = false, version = '3.0.0' }
+# Local dependencies
+mc-support = { path = '../support' }
 
 [dev-dependencies]
 serde = { version = "1.0.119" }

@@ -5,6 +5,7 @@ use sp_runtime::{
 	traits::{ AccountIdConversion, }
 };
 use frame_support::traits::{ Get };
+use mc_support::traits::{ ModuleAccessor };
 
 pub use pallet::*;
 
@@ -79,6 +80,10 @@ pub mod pallet {
 		SomethingStored(u32, T::AccountId),
 	}
 
+	#[deprecated(note = "use `Event` instead")]
+	pub type RawEvent<T> = Event<T>;
+
+
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
@@ -99,5 +104,11 @@ impl<T: Config> Pallet<T> {
 	/// value and only call this once.
 	pub fn account_id() -> T::AccountId {
 		T::ModuleId::get().into_account()
+	}
+}
+
+impl<T: Config> ModuleAccessor<T::AccountId> for Pallet<T> {
+	fn get_owner_id() -> T::AccountId {
+		Self::account_id()
 	}
 }
