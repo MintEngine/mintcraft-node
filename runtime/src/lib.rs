@@ -228,6 +228,28 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
+// Assets Pallet
+parameter_types! {
+	pub const AssetDepositBase: Balance = 100 * DOLLARS;
+	pub const AssetDepositPerZombie: Balance = 1 * DOLLARS;
+	pub const StringLimit: u32 = 50;
+	pub const MetadataDepositBase: Balance = 10 * DOLLARS;
+	pub const MetadataDepositPerByte: Balance = 1 * DOLLARS;
+}
+impl pallet_assets::Config for Runtime {
+	type Event = Event;
+	type Balance = Balance;
+	type AssetId = u32;
+	type Currency = Balances;
+	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+	type AssetDepositBase = AssetDepositBase;
+	type AssetDepositPerZombie = AssetDepositPerZombie;
+	type StringLimit = StringLimit;
+	type MetadataDepositBase = MetadataDepositBase;
+	type MetadataDepositPerByte = MetadataDepositPerByte;
+	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+}
+
 parameter_types! {
 	pub const MaxNfts: u128 = 2^64;
 	pub const MaxNftsPerUser: u64 = 256;
@@ -242,26 +264,8 @@ impl mc_nft::Config for Runtime {
 	type UserCommodityLimit = MaxNftsPerUser;
 }
 
-// Assets Pallet
-// parameter_types! {
-// 	pub const AssetDepositBase: Balance = 100 * DOLLARS;
-// 	pub const AssetDepositPerZombie: Balance = 1 * DOLLARS;
-// 	pub const StringLimit: u32 = 50;
-// 	pub const MetadataDepositBase: Balance = 10 * DOLLARS;
-// 	pub const MetadataDepositPerByte: Balance = 1 * DOLLARS;
-// }
 impl mc_featured_assets::Config for Runtime {
 	type Event = Event;
-	// type Balance = Balance;
-	// type AssetId = u32;
-	// type Currency = Balances;
-	// type ForceOrigin = EnsureRoot<AccountId>;
-	// type AssetDepositBase = AssetDepositBase;
-	// type AssetDepositPerZombie = AssetDepositPerZombie;
-	// type StringLimit = StringLimit;
-	// type MetadataDepositBase = MetadataDepositBase;
-	// type MetadataDepositPerByte = MetadataDepositPerByte;
-	// type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
 }
 
 impl mc_actor::Config for Runtime {
@@ -296,6 +300,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		// Include the custom logic from the template pallet in the runtime.
+		Assets: pallet_assets::{Module, Call, Storage, Event<T>},
 		NftModule: mc_nft::{Module, Call, Storage, Event<T>},
 		FeaturedAssetsModule: mc_featured_assets::{Module, Call, Storage, Event<T>},
 		ActorModule: mc_actor::{Module, Call, Storage, Event<T>},
@@ -503,6 +508,7 @@ impl_runtime_apis! {
 			let params = (&config, &whitelist);
 
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
+			add_benchmark!(params, batches, pallet_assets, Assets);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 
