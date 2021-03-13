@@ -271,22 +271,16 @@ impl mc_nft::Config for Runtime {
 	type Currency = Balances;
 }
 
-impl mc_featured_assets::Config for Runtime {
-	type Event = Event;
+parameter_types! {
+	pub const MaxNfts: u128 = 2^64;
+	pub const MaxNftsPerUser: u64 = 256;
 }
-impl mc_actor::Config for Runtime {
-	type Event = Event;
-}
-impl mc_implication::Config for Runtime {
-	type Event = Event;
-}
-impl mc_cultivate::Config for Runtime {
-	type Event = Event;
-}
-impl mc_nature::Config for Runtime {
-	type Event = Event;
-}
-impl mc_dungeons::Config for Runtime {
+
+impl pallet_nft::Config for Runtime {
+	type CommodityAdmin = frame_system::EnsureRoot<AccountId>;
+	type CommodityInfo = ();
+	type CommodityLimit = MaxNfts;
+	type UserCommodityLimit = MaxNftsPerUser;
 	type Event = Event;
 }
 

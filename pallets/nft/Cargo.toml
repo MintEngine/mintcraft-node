@@ -29,6 +29,8 @@ serde = { version = "1.0.101", optional = true, features = ["derive"] }
 [dev-dependencies]
 sp-core = { default-features = false, version = '3.0.0' }
 sp-io = { default-features = false, version = '3.0.0' }
+pallet-balances = { default-features = false, version = '3.0.0' }
+sp-externalities = { default-features = false, version = "0.9.0" }
 
 [features]
 default = ['std']
