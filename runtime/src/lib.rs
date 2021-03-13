@@ -24,6 +24,11 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+pub mod primitives;
+pub use primitives::*;
+pub mod constants;
+use constants::{time::*, currency::*};
+
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
 	construct_runtime, parameter_types,
@@ -49,32 +54,6 @@ pub use mc_cultivate;
 pub use mc_implication;
 pub use mc_nature;
 pub use mc_dungeons;
-
-/// An index to a block.
-pub type BlockNumber = u32;
-
-/// Alias to 512-bit hash when used in the context of a transaction signature on the chain.
-pub type Signature = MultiSignature;
-
-/// Some way of identifying an account on the chain. We intentionally make it equivalent
-/// to the public key of our transaction signing scheme.
-pub type AccountId = <<Signature as Verify>::Signer as IdentifyAccount>::AccountId;
-
-/// The type for looking up accounts. We don't expect more than 4 billion of them, but you
-/// never know...
-pub type AccountIndex = u32;
-
-/// Balance of an account.
-pub type Balance = u128;
-
-/// Index of a transaction in the chain.
-pub type Index = u32;
-
-/// A hash of some data used by the chain.
-pub type Hash = sp_core::H256;
-
-/// Digest item type.
-pub type DigestItem = generic::DigestItem<Hash>;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -109,21 +88,6 @@ pub const VERSION: RuntimeVersion = RuntimeVersion {
 	apis: RUNTIME_API_VERSIONS,
 	transaction_version: 1,
 };
-
-/// This determines the average expected block time that we are targeting.
-/// Blocks will be produced at a minimum duration defined by `SLOT_DURATION`.
-/// `SLOT_DURATION` is picked up by `pallet_timestamp` which is in turn picked
-/// up by `pallet_aura` to implement `fn slot_duration()`.
-///
-/// Change this to adjust the block time.
-pub const MILLISECS_PER_BLOCK: u64 = 6000;
-
-pub const SLOT_DURATION: u64 = MILLISECS_PER_BLOCK;
-
-// Time is measured by number of blocks.
-pub const MINUTES: BlockNumber = 60_000 / (MILLISECS_PER_BLOCK as BlockNumber);
-pub const HOURS: BlockNumber = MINUTES * 60;
-pub const DAYS: BlockNumber = HOURS * 24;
 
 /// The version information used to identify this runtime when compiled natively.
 #[cfg(feature = "std")]
@@ -271,10 +235,48 @@ parameter_types! {
 
 /// Configure all local pallets in ../pallets.
 impl mc_nft::Config for Runtime {
+	type Event = Event;
 	type CommodityAdmin = frame_system::EnsureRoot<AccountId>;
 	type CommodityInfo = ();
 	type CommodityLimit = MaxNfts;
 	type UserCommodityLimit = MaxNftsPerUser;
+}
+
+// Assets Pallet
+// parameter_types! {
+// 	pub const AssetDepositBase: Balance = 100 * DOLLARS;
+// 	pub const AssetDepositPerZombie: Balance = 1 * DOLLARS;
+// 	pub const StringLimit: u32 = 50;
+// 	pub const MetadataDepositBase: Balance = 10 * DOLLARS;
+// 	pub const MetadataDepositPerByte: Balance = 1 * DOLLARS;
+// }
+impl mc_featured_assets::Config for Runtime {
+	type Event = Event;
+	// type Balance = Balance;
+	// type AssetId = u32;
+	// type Currency = Balances;
+	// type ForceOrigin = EnsureRoot<AccountId>;
+	// type AssetDepositBase = AssetDepositBase;
+	// type AssetDepositPerZombie = AssetDepositPerZombie;
+	// type StringLimit = StringLimit;
+	// type MetadataDepositBase = MetadataDepositBase;
+	// type MetadataDepositPerByte = MetadataDepositPerByte;
+	// type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+}
+
+impl mc_actor::Config for Runtime {
+	type Event = Event;
+}
+impl mc_implication::Config for Runtime {
+	type Event = Event;
+}
+impl mc_cultivate::Config for Runtime {
+	type Event = Event;
+}
+impl mc_nature::Config for Runtime {
+	type Event = Event;
+}
+impl mc_dungeons::Config for Runtime {
 	type Event = Event;
 }
 
