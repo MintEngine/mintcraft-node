@@ -17,7 +17,7 @@ use sp_runtime::traits::{
 use sp_runtime::{
 	create_runtime_str, generic, impl_opaque_keys,
 	transaction_validity::{TransactionSource, TransactionValidity},
-	ApplyExtrinsicResult,
+	ApplyExtrinsicResult, ModuleId,
 };
 use sp_std::prelude::*;
 #[cfg(feature = "std")]
@@ -273,9 +273,16 @@ impl mc_implication::Config for Runtime {
 impl mc_cultivate::Config for Runtime {
 	type Event = Event;
 }
+
+parameter_types! {
+	pub const NatureModuleId: ModuleId = ModuleId(*b"kis/stpr");
+}
+
 impl mc_nature::Config for Runtime {
 	type Event = Event;
+	type ModuleId = NatureModuleId;
 }
+
 impl mc_dungeons::Config for Runtime {
 	type Event = Event;
 }

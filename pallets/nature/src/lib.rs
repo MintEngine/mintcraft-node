@@ -1,15 +1,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use sp_runtime::{
+	ModuleId,
+	traits::{ AccountIdConversion, }
+};
+use frame_support::traits::{ Get };
+
 pub use pallet::*;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{
-		dispatch::DispatchResultWithPostInfo,
-		pallet_prelude::*
-	};
 	use frame_system::pallet_prelude::*;
-	// use super::*;
+	use frame_support::{
+		pallet_prelude::*,
+		dispatch::DispatchResultWithPostInfo
+	};
+
+	use super::*;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -18,6 +25,10 @@ pub mod pallet {
 	/// The module configuration trait.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
+		#[pallet::constant]
+		/// The Lottery's module id
+		type ModuleId: Get<ModuleId>;
+
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 	}
@@ -34,37 +45,17 @@ pub mod pallet {
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
 		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResultWithPostInfo {
-			// Check that the extrinsic was signed and get the signer.
-			// This function will return an error if the extrinsic is not signed.
-			// https://substrate.dev/docs/en/knowledgebase/runtime/origin
-			let who = ensure_signed(origin)?;
+			ensure_signed(origin)?;
+
+			let who = T::ModuleId::get().into_account();
 
 			// Update storage.
-			<Something<T>>::put(something);
+			Something::<T>::put(something);
 
 			// Emit an event.
 			Self::deposit_event(Event::SomethingStored(something, who));
 			// Return a successful DispatchResultWithPostInfo
 			Ok(().into())
-		}
-
-		/// An example dispatchable that may throw a custom error.
-		#[pallet::weight(10_000 + T::DbWeight::get().reads_writes(1,1))]
-		pub fn cause_error(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
-			let _who = ensure_signed(origin)?;
-
-			// Read a value from storage.
-			match <Something<T>>::get() {
-				// Return an error if the value has not been set.
-				None => Err(Error::<T>::NoneValue)?,
-				Some(old) => {
-					// Increment the value read from storage; will error in the event of overflow.
-					let new = old.checked_add(1).ok_or(Error::<T>::StorageOverflow)?;
-					// Update the value in storage with the incremented result.
-					<Something<T>>::put(new);
-					Ok(().into())
-				},
-			}
 		}
 	}
 
@@ -101,5 +92,12 @@ pub mod pallet {
 // The main implementation block for the module.
 impl<T: Config> Pallet<T> {
 	// Public immutables
-	// TODO
+
+	/// The account ID of Nature.
+	///
+	/// This actually does computation. If you need to keep using it, then make sure you cache the
+	/// value and only call this once.
+	pub fn account_id() -> T::AccountId {
+		T::ModuleId::get().into_account()
+	}
 }
