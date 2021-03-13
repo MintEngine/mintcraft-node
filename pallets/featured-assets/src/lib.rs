@@ -243,6 +243,7 @@ pub mod pallet {
 				zombies: Zero::zero(),
 				accounts: Zero::zero(),
 				is_frozen: false,
+				is_featured: false
 			});
 			Self::deposit_event(Event::Created(id, owner, admin));
 			Ok(().into())
@@ -295,6 +296,7 @@ pub mod pallet {
 				zombies: Zero::zero(),
 				accounts: Zero::zero(),
 				is_frozen: false,
+				is_featured: false,
 			});
 			Self::deposit_event(Event::ForceCreated(id, owner));
 			Ok(().into())
@@ -1013,6 +1015,15 @@ pub mod pallet {
 		AssetMetadata<BalanceOf<T>>,
 		ValueQuery
 	>;
+	#[pallet::storage]
+	/// The Feature of an asset.Account
+	pub(super) type Feature<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AssetId,
+		AssetFeature,
+		ValueQuery
+	>;
 }
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug)]
@@ -1046,6 +1057,8 @@ pub struct AssetDetails<
 	accounts: u32,
 	/// Whether the asset is frozen for permissionless transfers.
 	is_frozen: bool,
+	/// Whether the asset is a featured asset
+	is_featured: bool,
 }
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
@@ -1072,6 +1085,19 @@ pub struct AssetMetadata<DepositBalance> {
 	symbol: Vec<u8>,
 	/// The number of decimals this asset uses to represent one unit.
 	decimals: u8,
+}
+
+// Featured Part for asset
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
+pub struct AssetFeature {
+	/// The level of this asset
+	level: u8,
+	/// The 'hue' identity of this asset
+	hue: u8,
+	/// The 'saturation' of this asset
+	saturation: u8,
+	/// The 'lightness' of this asset
+	lightness: u8
 }
 
 // The main implementation block for the module.
