@@ -264,19 +264,13 @@ impl pallet_sudo::Config for Runtime {
 	type Call = Call;
 }
 
-/// Configure all local pallets in ../pallets.
-impl mc_nft::Config for Runtime {
-	type Event = Event;
-	type TokenId = u64;
-	type Currency = Balances;
-}
-
 parameter_types! {
 	pub const MaxNfts: u128 = 2^64;
 	pub const MaxNftsPerUser: u64 = 256;
 }
 
-impl pallet_nft::Config for Runtime {
+/// Configure all local pallets in ../pallets.
+impl mc_nft::Config for Runtime {
 	type CommodityAdmin = frame_system::EnsureRoot<AccountId>;
 	type CommodityInfo = ();
 	type CommodityLimit = MaxNfts;
