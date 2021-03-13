@@ -236,7 +236,7 @@ parameter_types! {
 	pub const MetadataDepositBase: Balance = 10 * DOLLARS;
 	pub const MetadataDepositPerByte: Balance = 1 * DOLLARS;
 }
-impl pallet_assets::Config for Runtime {
+impl mc_featured_assets::Config for Runtime {
 	type Event = Event;
 	type Balance = Balance;
 	type AssetId = u32;
@@ -247,7 +247,7 @@ impl pallet_assets::Config for Runtime {
 	type StringLimit = StringLimit;
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
-	type WeightInfo = pallet_assets::weights::SubstrateWeight<Runtime>;
+	type WeightInfo = mc_featured_assets::weights::SubstrateWeight<Runtime>;
 }
 
 parameter_types! {
@@ -262,10 +262,6 @@ impl mc_nft::Config for Runtime {
 	type CommodityInfo = ();
 	type CommodityLimit = MaxNfts;
 	type UserCommodityLimit = MaxNftsPerUser;
-}
-
-impl mc_featured_assets::Config for Runtime {
-	type Event = Event;
 }
 
 impl mc_actor::Config for Runtime {
@@ -300,14 +296,13 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment::{Module, Storage},
 		Sudo: pallet_sudo::{Module, Call, Config<T>, Storage, Event<T>},
 		// Include the custom logic from the template pallet in the runtime.
-		Assets: pallet_assets::{Module, Call, Storage, Event<T>},
-		NftModule: mc_nft::{Module, Call, Storage, Event<T>},
-		FeaturedAssetsModule: mc_featured_assets::{Module, Call, Storage, Event<T>},
-		ActorModule: mc_actor::{Module, Call, Storage, Event<T>},
-		ImplicationModule: mc_implication::{Module, Call, Storage, Event<T>},
-		CultivateModule: mc_cultivate::{Module, Call, Storage, Event<T>},
-		NatureModule: mc_nature::{Module, Call, Storage, Event<T>},
-		DungeonsModule: mc_dungeons::{Module, Call, Storage, Event<T>},
+		FeaturedAssets: mc_featured_assets::{Module, Call, Storage, Event<T>},
+		Commodity: mc_nft::{Module, Call, Storage, Event<T>},
+		Actor: mc_actor::{Module, Call, Storage, Event<T>},
+		Implication: mc_implication::{Module, Call, Storage, Event<T>},
+		Cultivate: mc_cultivate::{Module, Call, Storage, Event<T>},
+		Nature: mc_nature::{Module, Call, Storage, Event<T>},
+		Dungeons: mc_dungeons::{Module, Call, Storage, Event<T>},
 	}
 );
 
@@ -508,7 +503,6 @@ impl_runtime_apis! {
 			let params = (&config, &whitelist);
 
 			add_benchmark!(params, batches, frame_system, SystemBench::<Runtime>);
-			add_benchmark!(params, batches, pallet_assets, Assets);
 			add_benchmark!(params, batches, pallet_balances, Balances);
 			add_benchmark!(params, batches, pallet_timestamp, Timestamp);
 

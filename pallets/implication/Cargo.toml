@@ -1,7 +1,7 @@
 [package]
 name = 'mc-implication'
 version = '0.1.0'
-authors = ['Tang Bo Hao<tech@btang.cn>','Yin Nan']
+authors = ['Tang Bo Hao <tech@btang.cn>','Yin Nan']
 description = 'Mintcraft pallet of implication'
 edition = '2018'
 license = 'MIT'
