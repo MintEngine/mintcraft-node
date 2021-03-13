@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use sp_runtime::{
-	generic, traits::{Verify, BlakeTwo256, IdentifyAccount}, OpaqueExtrinsic, MultiSignature
+	generic, traits::{Verify, IdentifyAccount}, MultiSignature
 };
 
 /// An index to a block.
