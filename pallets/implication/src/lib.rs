@@ -30,7 +30,9 @@ pub mod pallet {
 	impl<T:Config> Pallet<T> {
 		/// This function must be dispatched by a signed extrinsic.
 		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
-		pub fn do_something(_origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn do_something(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+			let who = ensure_signed(origin)?;
+			Self::deposit_event(Event::SomethingEmit(who));
 			Ok(().into())
 		}
 	}
@@ -43,7 +45,7 @@ pub mod pallet {
 	#[pallet::metadata(T::AccountId = "AccountId")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		// SomethingStored(u32, T::AccountId),
+		SomethingEmit(T::AccountId),
 	}
 
 	#[pallet::error]
