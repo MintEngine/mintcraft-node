@@ -70,7 +70,7 @@ pub trait Config<I = DefaultInstance>: frame_system::Config {
     /// The maximum number of this type of commodity that any single account may own.
     type UserCommodityLimit: Get<u64>;
     /// The decay time in block number delta
-    type DecayTime: Get<u64>;
+    type DecayTime: Get<Self::BlockNumber>;
     type Event: From<Event<Self, I>> + Into<<Self as frame_system::Config>::Event>;
 }
 
@@ -87,7 +87,7 @@ pub struct MetaKeyValue {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Encode, Decode, Default, RuntimeDebug)]
-pub struct ExistInfo<BlockNumber> {
+pub struct ExistInfo<BlockNumber: BaseArithmetic> {
     generated_at: BlockNumber,
     decayed_at: BlockNumber,
 }
@@ -172,7 +172,6 @@ decl_module! {
     pub struct Module<T: Config<I>, I: Instance = DefaultInstance> for enum Call where origin: T::Origin {
         type Error = Error<T, I>;
         fn deposit_event() = default;
-        const DecayTime: u64 = T::DecayTime::get();
 
         /// Create a new commodity from the provided commodity info and identify the specified
         /// account as its owner. The ID of the new commodity will be equal to the hash of the info
@@ -195,8 +194,7 @@ decl_module! {
             // add exist info
             NftExistInfo::<T, I>::insert(commodity_id, ExistInfo {
                 generated_at: <frame_system::Module<T>>::block_number(),
-                decayed_at: <frame_system::Module<T>>::block_number(),
-                // decayed_at: <frame_system::Module<T>>::block_number().saturating_add(T::CommodityLimit.get()),
+                decayed_at: <frame_system::Module<T>>::block_number() + T::DecayTime::get(),
             });
             Self::deposit_event(RawEvent::Minted(commodity_id, owner_account.clone()));
             Ok(())

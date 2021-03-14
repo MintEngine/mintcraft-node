@@ -259,7 +259,7 @@ impl mc_featured_assets::Config for Runtime {
 parameter_types! {
 	pub const MaxNfts: u128 = 2^64;
 	pub const MaxNftsPerUser: u64 = 256;
-	pub const DecayTime: u64 = 10_000_000;
+	pub const DecayTime: BlockNumber = 10_000_000;
 }
 
 /// Configure all local pallets in ../pallets.
