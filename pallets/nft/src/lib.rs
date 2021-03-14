@@ -44,7 +44,6 @@ use frame_support::{
     Hashable,
 };
 use frame_system::ensure_signed;
-use sp_arithmetic::traits::{BaseArithmetic, Saturating};
 use sp_runtime::{
     traits::{Hash, Member},
     RuntimeDebug,
@@ -87,7 +86,7 @@ pub struct MetaKeyValue {
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Encode, Decode, Default, RuntimeDebug)]
-pub struct ExistInfo<BlockNumber: BaseArithmetic> {
+pub struct ExistInfo<BlockNumber> {
     generated_at: BlockNumber,
     decayed_at: BlockNumber,
 }
