@@ -3,7 +3,6 @@
 ## Getting Started
 
 Follow these steps to get started.
-
 ### Rust Setup
 
 First, complete the [basic Rust setup instructions](./doc/rust-setup.md).
@@ -32,6 +31,28 @@ subcommands:
 
 ```sh
 ./target/release/mintcraft -h
+```
+
+### Types
+
+Setup in 'Developers' when using [https://polkadot.js.org](https://polkadot.js.org)
+
+```json
+{
+  "CommodityId": "Hash",
+  "CommodityInfo": {
+    "name": "Vec<u8>",
+    "version": "Vec<u8>"
+  },
+  "MetaKeyValue": {
+   "key": "Vec<u8>",
+   "value": "bool"
+  },
+  "Commodity": {
+   "id": "CommodityId",
+   "info": "CommodityInfo"
+  }
+}
 ```
 
 ## Run
