@@ -44,6 +44,7 @@ use frame_support::{
     Hashable,
 };
 use frame_system::ensure_signed;
+use sp_arithmetic::traits::{BaseArithmetic, Saturating};
 use sp_runtime::{
     traits::{Hash, Member},
     RuntimeDebug,
@@ -68,6 +69,8 @@ pub trait Config<I = DefaultInstance>: frame_system::Config {
     type CommodityLimit: Get<u128>;
     /// The maximum number of this type of commodity that any single account may own.
     type UserCommodityLimit: Get<u64>;
+    /// The decay time in block number delta
+    type DecayTime: Get<u64>;
     type Event: From<Event<Self, I>> + Into<<Self as frame_system::Config>::Event>;
 }
 
@@ -83,11 +86,20 @@ pub struct MetaKeyValue {
     value: bool,
 }
 
+#[derive(Copy, Clone, Eq, PartialEq, Encode, Decode, Default, RuntimeDebug)]
+pub struct ExistInfo<BlockNumber> {
+    generated_at: BlockNumber,
+    decayed_at: BlockNumber,
+}
+
 /// The runtime system's hashing algorithm is used to uniquely identify commodities.
 pub type CommodityId<T> = <T as frame_system::Config>::Hash;
 
 /// Associates a commodity with its ID.
 pub type Commodity<T, I> = (CommodityId<T>, <T as Config<I>>::CommodityInfo);
+
+/// exist info of nft
+pub type ExistInfoOf<T> = ExistInfo<<T as frame_system::Config>::BlockNumber>;
 
 decl_storage! {
     trait Store for Module<T: Config<I>, I: Instance = DefaultInstance> as Commodity {
@@ -103,6 +115,8 @@ decl_storage! {
         AccountForCommodity get(fn account_for_commodity): map hasher(identity) CommodityId<T> => T::AccountId;
         /// meta data for current NFT
         NftMeta get(fn meta_data): map hasher(identity) CommodityId<T> => Vec<MetaKeyValue>;
+        /// time of generated and decay
+        NftExistInfo get(fn exist_info): map hasher(identity) CommodityId<T> => ExistInfoOf<T>;
     }
 
     add_extra_genesis {
@@ -158,6 +172,7 @@ decl_module! {
     pub struct Module<T: Config<I>, I: Instance = DefaultInstance> for enum Call where origin: T::Origin {
         type Error = Error<T, I>;
         fn deposit_event() = default;
+        const DecayTime: u64 = T::DecayTime::get();
 
         /// Create a new commodity from the provided commodity info and identify the specified
         /// account as its owner. The ID of the new commodity will be equal to the hash of the info
@@ -177,6 +192,12 @@ decl_module! {
             // T::CommodityAdmin::ensure_origin(origin)?;
             ensure_signed(origin)?;
             let commodity_id = <Self as UniqueAssets<_>>::mint(&owner_account, commodity_info)?;
+            // add exist info
+            NftExistInfo::<T, I>::insert(commodity_id, ExistInfo {
+                generated_at: <frame_system::Module<T>>::block_number(),
+                decayed_at: <frame_system::Module<T>>::block_number(),
+                // decayed_at: <frame_system::Module<T>>::block_number().saturating_add(T::CommodityLimit.get()),
+            });
             Self::deposit_event(RawEvent::Minted(commodity_id, owner_account.clone()));
             Ok(())
         }
@@ -319,10 +340,13 @@ impl<T: Config<I>, I: Instance> UniqueAssets<T::AccountId> for Module<T, I> {
         CommoditiesForAccount::<T, I>::mutate(owner, |commodities| {
             let pos = commodities
                 .binary_search(&burn_commodity)
-                .expect("We already checked that we have the correct owner; qed");
+                .expect("We already checked that we have the correct owner;");
             commodities.remove(pos);
         });
         AccountForCommodity::<T, I>::remove(&commodity_id);
+        // remove meta and exist info
+        NftMeta::<T, I>::remove(&commodity_id);
+        NftExistInfo::<T, I>::remove(&commodity_id);
 
         Ok(())
     }

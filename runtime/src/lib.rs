@@ -259,7 +259,7 @@ impl mc_featured_assets::Config for Runtime {
 parameter_types! {
 	pub const MaxNfts: u128 = 2^64;
 	pub const MaxNftsPerUser: u64 = 256;
-	// pub const DecayTime: u64 = 1_000_000;
+	pub const DecayTime: u64 = 10_000_000;
 }
 
 /// Configure all local pallets in ../pallets.
@@ -269,7 +269,7 @@ impl mc_nft::Config for Runtime {
 	type CommodityInfo = mc_nft::CommodityInfo;
 	type CommodityLimit = MaxNfts;
 	type UserCommodityLimit = MaxNftsPerUser;
-	// type DecayTime = DecayTime;
+	type DecayTime = DecayTime;
 }
 
 impl mc_actor::Config for Runtime {
