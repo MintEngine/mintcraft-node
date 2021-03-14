@@ -30,6 +30,9 @@ impl RandomNumber<u32> for () {
 pub trait LifeTime<BlockNumber> {
 	fn base_age(level: u32) -> BlockNumber;
 }
+impl LifeTime<u64> for () {
+	fn base_age(_: u32) -> u64 { 0 }
+}
 
 // Implication related traits
 pub trait ImplicationSystem {

@@ -64,6 +64,7 @@ impl mc_nft::Config for Test {
   type CommodityInfo = Vec<u8>;
   type CommodityLimit = MaxCommodities;
   type UserCommodityLimit = MaxCommoditiesPerUser;
+  type LifeTime = ();
 }
 
 // Build genesis storage according to the mock runtime.
