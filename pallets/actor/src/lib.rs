@@ -4,16 +4,17 @@ use sp_std::prelude::*;
 use sp_runtime::{
 	RuntimeDebug, Percent,
 	traits::{
-		StaticLookup,
+		// StaticLookup,
+		One,
 		// Zero,
 		// Saturating, CheckedSub, CheckedAdd,
 	},
 };
-use frame_support::{
+// use frame_support::{
 	// ensure,
-	traits::{ Get },
+	// traits::{ Get },
 	// dispatch::DispatchError,
-};
+// };
 use codec::{Encode, Decode};
 use mc_support::{
 	traits::{ LifeTime }
@@ -59,8 +60,20 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let one = ensure_signed(origin)?;
 
-			// TODO
+			ensure!(!Actors::<T>::contains_key(one.clone()), Error::<T>::Alive);
 
+			let current_block = frame_system::Module::<T>::block_number();
+			// add actor
+			Actors::<T>::insert(one.clone(), ActorInfo {
+				born_at: current_block,
+				born_age: One::one(),
+				live_until: current_block + T::ActorLifeTime::base_age(1),
+				level: 1,
+				level_progress: Percent::from_percent(0),
+			});
+
+			// Emit event.
+			Self::deposit_event(Event::ActorBorn(one));
 			Ok(().into())
 		}
 	}
@@ -86,6 +99,8 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		/// Actor Alive.
+		Alive,
 		/// Actor does't exist.
 		NotExist,
 		/// Actor was dead.
@@ -110,5 +125,8 @@ pub struct ActorInfo<BlockNumber> {
 // The main implementation block for the module.
 impl<T: Config> Pallet<T> {
 	// Public immutables
-	// TODO
+	/// whether the actor is alive
+	pub fn is_alive(who: &T::AccountId) -> bool {
+		Actors::<T>::contains_key(who.clone())
+	}
 }
