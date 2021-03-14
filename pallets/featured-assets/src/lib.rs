@@ -128,7 +128,7 @@ use frame_support::{
 };
 use mc_support::{
 	primitives::{FeatureElements, FeatureLevel, FeatureDestinyRank, FeatureRankedLevel},
-	traits::{ModuleAccessor, RandomNumber},
+	traits::{ManagerAccessor, RandomNumber},
 };
 
 pub use weights::WeightInfo;
@@ -188,7 +188,7 @@ pub mod pallet {
 		type WeightInfo: WeightInfo;
 
 		/// Asset Admin is outer module
-		type AssetAdmin: ModuleAccessor<Self::AccountId>;
+		type AssetAdmin: ManagerAccessor<Self::AccountId>;
 
 		/// Something that provides randomness in the runtime.
 		type RandomNumber: RandomNumber<u32>;

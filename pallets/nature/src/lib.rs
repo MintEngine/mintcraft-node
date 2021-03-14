@@ -18,7 +18,7 @@ use frame_support::{
 };
 use codec::{Encode, Decode};
 use mc_support::traits::{
-	ModuleAccessor, RandomNumber
+	ManagerAccessor, RandomNumber
 };
 
 pub use pallet::*;
@@ -202,7 +202,7 @@ impl<T: Config> Pallet<T> {
 	}
 }
 
-impl<T: Config> ModuleAccessor<T::AccountId> for Pallet<T> {
+impl<T: Config> ManagerAccessor<T::AccountId> for Pallet<T> {
 	fn get_owner_id() -> T::AccountId {
 		Self::account_id()
 	}
