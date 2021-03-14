@@ -127,7 +127,7 @@ use frame_support::{
 	dispatch::DispatchError,
 };
 use mc_support::{
-	primitives::{FeatureElements, FeatureLevel},
+	primitives::{FeatureElements, FeatureLevel, FeatureDestinyRank, FeatureRankedLevel},
 	traits::{ModuleAccessor, RandomNumber},
 };
 
@@ -1055,13 +1055,13 @@ pub struct AssetMetadata<DepositBalance> {
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
 pub struct AssetFeature {
 	/// The level of this asset
-	level: FeatureLevel,
+	destiny: FeatureDestinyRank,
 	/// The 'hue' identity of this asset
 	elements: FeatureElements,
 	/// The 'saturation' of this asset
-	saturation: u8,
+	saturation: FeatureRankedLevel,
 	/// The 'lightness' of this asset
-	lightness: u8
+	lightness: FeatureLevel
 }
 
 // The main implementation block for the module.
