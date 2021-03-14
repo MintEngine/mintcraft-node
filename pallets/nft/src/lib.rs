@@ -49,6 +49,7 @@ use sp_runtime::{
     RuntimeDebug,
 };
 use sp_std::{cmp::Eq, fmt::Debug, vec::Vec};
+use mc_support::traits::{LifeTime};
 
 pub mod nft;
 pub use crate::nft::UniqueAssets;
@@ -60,6 +61,8 @@ mod mock;
 mod tests;
 
 pub trait Config<I = DefaultInstance>: frame_system::Config {
+    type Event: From<Event<Self, I>> + Into<<Self as frame_system::Config>::Event>;
+
     /// The dispatch origin that is able to mint new instances of this type of commodity.
     type CommodityAdmin: EnsureOrigin<Self::Origin>;
     /// The data type that is used to describe this type of commodity.
@@ -69,8 +72,7 @@ pub trait Config<I = DefaultInstance>: frame_system::Config {
     /// The maximum number of this type of commodity that any single account may own.
     type UserCommodityLimit: Get<u64>;
     /// The decay time in block number delta
-    type DecayTime: Get<Self::BlockNumber>;
-    type Event: From<Event<Self, I>> + Into<<Self as frame_system::Config>::Event>;
+    type LifeTime: LifeTime<Self::BlockNumber>;
 }
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
@@ -193,7 +195,7 @@ decl_module! {
             // add exist info
             NftExistInfo::<T, I>::insert(commodity_id, ExistInfo {
                 generated_at: <frame_system::Module<T>>::block_number(),
-                decayed_at: <frame_system::Module<T>>::block_number() + T::DecayTime::get(),
+                decayed_at: <frame_system::Module<T>>::block_number() + T::LifeTime::base_age(0),
             });
             Self::deposit_event(RawEvent::Minted(commodity_id, owner_account.clone()));
             Ok(())

@@ -30,7 +30,7 @@ pub use primitives::*;
 pub mod constants;
 use constants::{time::*, currency::*};
 pub mod impls;
-use impls::Demo;
+use impls::*;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -259,7 +259,6 @@ impl mc_featured_assets::Config for Runtime {
 parameter_types! {
 	pub const MaxNfts: u128 = 2^64;
 	pub const MaxNftsPerUser: u64 = 256;
-	pub const DecayTime: BlockNumber = 10_000_000;
 }
 
 /// Configure all local pallets in ../pallets.
@@ -269,12 +268,12 @@ impl mc_nft::Config for Runtime {
 	type CommodityInfo = mc_nft::CommodityInfo;
 	type CommodityLimit = MaxNfts;
 	type UserCommodityLimit = MaxNftsPerUser;
-	type DecayTime = DecayTime;
+	type LifeTime = DemoItem;
 }
 
 impl mc_actor::Config for Runtime {
 	type Event = Event;
-	type ActorLifeTime = Demo;
+	type ActorLifeTime = DemoActor;
 }
 impl mc_implication::Config for Runtime {
 	type Event = Event;
