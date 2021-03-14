@@ -10,3 +10,21 @@ impl ModuleAccessor<u64> for () {
 		0
 	}
 }
+
+// Implication related traits
+pub trait ImplicationSystem {
+
+}
+
+pub trait ImplicationEntity {
+
+}
+
+// Decay related traits
+pub trait DecayingSystem {
+
+}
+
+pub trait DecayingEntity {
+
+}
