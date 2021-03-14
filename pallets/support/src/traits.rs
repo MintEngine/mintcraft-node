@@ -26,6 +26,11 @@ impl RandomNumber<u32> for () {
 	fn generate_random_in_range(_: u32) -> u32 { 0 }
 }
 
+// some thing with life
+pub trait LifeTime<BlockNumber> {
+	fn base_age(level: u32) -> BlockNumber;
+}
+
 // Implication related traits
 pub trait ImplicationSystem {
 

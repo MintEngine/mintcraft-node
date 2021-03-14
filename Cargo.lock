@@ -3195,10 +3195,12 @@ version = "0.1.0"
 dependencies = [
  "frame-support",
  "frame-system",
+ "mc-support",
  "parity-scale-codec",
  "serde",
  "sp-core",
  "sp-runtime",
+ "sp-std",
 ]
 
 [[package]]

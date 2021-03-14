@@ -24,10 +24,13 @@ use sp_std::prelude::*;
 use sp_version::NativeVersion;
 use sp_version::RuntimeVersion;
 
+// Local implements
 pub mod primitives;
 pub use primitives::*;
 pub mod constants;
 use constants::{time::*, currency::*};
+pub mod impls;
+use impls::Demo;
 
 // A few exports that help ease life for downstream crates.
 pub use frame_support::{
@@ -269,6 +272,7 @@ impl mc_nft::Config for Runtime {
 
 impl mc_actor::Config for Runtime {
 	type Event = Event;
+	type ActorLifeTime = Demo;
 }
 impl mc_implication::Config for Runtime {
 	type Event = Event;
