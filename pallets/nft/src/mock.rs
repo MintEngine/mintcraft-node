@@ -56,6 +56,7 @@ impl system::Config for Test {
 parameter_types! {
   pub const MaxCommodities: u128 = 5;
   pub const MaxCommoditiesPerUser: u64 = 2;
+  pub const DecayTime: u64 = 100;
 }
 
 impl mc_nft::Config for Test {
@@ -64,6 +65,7 @@ impl mc_nft::Config for Test {
   type CommodityInfo = Vec<u8>;
   type CommodityLimit = MaxCommodities;
   type UserCommodityLimit = MaxCommoditiesPerUser;
+  type DecayTime = DecayTime;
 }
 
 // Build genesis storage according to the mock runtime.
