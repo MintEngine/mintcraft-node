@@ -56,6 +56,7 @@ impl system::Config for Test {
 parameter_types! {
   pub const MaxCommodities: u128 = 5;
   pub const MaxCommoditiesPerUser: u64 = 2;
+  pub const DecayTime: u64 = 100;
 }
 
 impl mc_nft::Config for Test {
