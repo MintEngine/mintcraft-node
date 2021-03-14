@@ -44,7 +44,6 @@ use frame_support::{
     Hashable,
 };
 use frame_system::ensure_signed;
-use sp_runtime::print;
 use sp_runtime::{
     traits::{Hash, Member},
     RuntimeDebug,
@@ -176,9 +175,7 @@ decl_module! {
         #[weight = 10_000]
         pub fn mint(origin, owner_account: T::AccountId, commodity_info: T::CommodityInfo) -> dispatch::DispatchResult {
             // T::CommodityAdmin::ensure_origin(origin)?;
-            print("mint start...");
-            let who = ensure_signed(origin)?;
-            print("mint end...");
+            ensure_signed(origin)?;
             let commodity_id = <Self as UniqueAssets<_>>::mint(&owner_account, commodity_info)?;
             Self::deposit_event(RawEvent::Minted(commodity_id, owner_account.clone()));
             Ok(())
@@ -242,15 +239,6 @@ decl_module! {
             Ok(())
         }
 
-        /// get meta for a specific nft
-         #[weight = 10_000]
-         pub fn get_meta(origin, commodity_id: CommodityId<T>) -> Vec<MetaKeyValue> {
-            let mut metas: Vec<MetaKeyValue> = Vec::new();
-            Self::meta_data(commodity_id).into_iter().map(|o|
-                metas.push(MetaKeyValue{key: o.key, value: o.value })
-            ).collect::<Vec<_>>();
-            metas
-         }
     }
 }
 
