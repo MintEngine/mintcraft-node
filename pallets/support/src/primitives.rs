@@ -18,7 +18,7 @@ pub enum FeatureHue {
 	Red,
 	Orange,
 	Pink,
-	Purple,
+	Purple
 }
 impl Into<u8> for FeatureHue {
 	fn into(self) -> u8 {
@@ -37,7 +37,8 @@ impl Into<u8> for FeatureHue {
 }
 impl From<u8> for FeatureHue {
 	fn from(num: u8) -> FeatureHue {
-		match num {
+		let mod_num = (num % 0x09) + 1u8;
+		match mod_num {
 			0x01 => Self::Green,
 			0x02 => Self::Yellow,
 			0x03 => Self::White,
@@ -46,8 +47,7 @@ impl From<u8> for FeatureHue {
 			0x06 => Self::Red,
 			0x07 => Self::Orange,
 			0x08 => Self::Pink,
-			0x09 => Self::Purple,
-			_ => Self::Green,
+			_ => Self::Purple,
 		}
 	}
 }
@@ -60,11 +60,18 @@ pub enum FeatureElements {
 }
 impl From<u32> for FeatureElements {
 	fn from(num: u32) -> FeatureElements {
-		const BYTES_PER_U32: usize = 4;
-
-		let mut bytes = [0u8; BYTES_PER_U32];
+		let mut bytes = [0u8; 4];
 		for i in 0..bytes.len() {
-			bytes[i] = (num >> (4 * i)) as u8;
+			bytes[i] = (num >> (8 * i)) as u8;
+		}
+		FeatureElements::from(&bytes)
+	}
+}
+impl From<u16> for FeatureElements {
+	fn from(num: u16) -> FeatureElements {
+		let mut bytes = [0u8; 4];
+		for i in 0..bytes.len() {
+			bytes[i] = ((num >> (4 * i)) & 0x0F) as u8;
 		}
 		FeatureElements::from(&bytes)
 	}
@@ -97,14 +104,13 @@ pub enum FeatureLevel {
 }
 impl From<u8> for FeatureLevel {
 	fn from(num: u8) -> FeatureLevel {
-		match num {
+		match num % 6 {
 			0u8 => FeatureLevel::Lv0,
 			1u8 => FeatureLevel::Lv1,
 			2u8 => FeatureLevel::Lv2,
 			3u8 => FeatureLevel::Lv3,
 			4u8 => FeatureLevel::Lv4,
-			5u8 => FeatureLevel::Lv5,
-			_ => FeatureLevel::Lv0,
+			_ => FeatureLevel::Lv5,
 		}
 	}
 }
@@ -130,6 +136,18 @@ pub enum FeatureRankedLevel {
 	Middle(FeatureLevel),
 	High(FeatureLevel),
 }
+impl From<u8> for FeatureRankedLevel {
+	fn from(num: u8) -> FeatureRankedLevel {
+		let level_value = num & 0x0F;
+		// 0x0(rank) 0(level)
+		// first is rank
+		match ((num >> 4) as u8) % 3 {
+			0u8 => FeatureRankedLevel::Low(FeatureLevel::from(level_value)),
+			1u8 => FeatureRankedLevel::Middle(FeatureLevel::from(level_value)),
+			_ => FeatureRankedLevel::High(FeatureLevel::from(level_value)),
+		}
+	}
+}
 impl Default for FeatureRankedLevel {
 	fn default() -> Self { Self::Low(FeatureLevel::Lv0) }
 }
@@ -140,6 +158,26 @@ pub enum FeatureDestinyRank {
 	Di,
 	Xuan,
 	Huang,
+}
+impl From<u8> for FeatureDestinyRank {
+	fn from(num: u8) -> FeatureDestinyRank {
+		match num % 4 {
+			0 => FeatureDestinyRank::Huang,
+			1 => FeatureDestinyRank::Xuan,
+			2 => FeatureDestinyRank::Di,
+			_ => FeatureDestinyRank::Tian,
+		}
+	}
+}
+impl Into<u8> for FeatureDestinyRank {
+	fn into(self) -> u8 {
+		match self {
+			FeatureDestinyRank::Huang => 0,
+			FeatureDestinyRank::Xuan => 1,
+			FeatureDestinyRank::Di => 2,
+			FeatureDestinyRank::Tian => 3,
+		}
+	}
 }
 impl Default for FeatureDestinyRank {
 	fn default() -> Self { Self::Huang }

@@ -71,7 +71,6 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 	pub const MetadataDepositBase: u64 = 1;
 	pub const MetadataDepositPerByte: u64 = 1;
-	pub const AssetFeaturePointLimit: u8 = 24;
 }
 
 impl Config for Test {
@@ -87,7 +86,6 @@ impl Config for Test {
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type WeightInfo = ();
 	type AssetAdmin = ();
-	type AssetFeaturePointLimit = AssetFeaturePointLimit;
 	type RandomNumber = ();
 }
 

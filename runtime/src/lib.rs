@@ -235,7 +235,6 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 	pub const MetadataDepositBase: Balance = 10 * DOLLARS;
 	pub const MetadataDepositPerByte: Balance = 1 * DOLLARS;
-	pub const AssetFeaturePointLimit: u8 = 24;
 }
 impl mc_featured_assets::Config for Runtime {
 	type Event = Event;
@@ -250,7 +249,6 @@ impl mc_featured_assets::Config for Runtime {
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type WeightInfo = mc_featured_assets::weights::SubstrateWeight<Runtime>;
 	// Featured part
-	type AssetFeaturePointLimit = AssetFeaturePointLimit;
 	type AssetAdmin = Nature;
 	type RandomNumber = Nature;
 }

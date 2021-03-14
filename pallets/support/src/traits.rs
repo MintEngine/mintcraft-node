@@ -28,9 +28,9 @@ pub trait RandomNumber<T> {
 	fn generate_random(seed: T) -> T;
 	fn generate_random_in_range(total: T) -> T;
 }
-impl RandomNumber<u8> for () {
-	fn generate_random(_: u8) -> u8 { 0 }
-	fn generate_random_in_range(_: u8) -> u8 { 0 }
+impl RandomNumber<u32> for () {
+	fn generate_random(_: u32) -> u32 { 0 }
+	fn generate_random_in_range(_: u32) -> u32 { 0 }
 }
 
 // Implication related traits

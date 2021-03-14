@@ -143,12 +143,12 @@ impl<T: Config> ModuleAccessor<T::AccountId> for Pallet<T> {
 	}
 }
 
-impl<T: Config> RandomNumber<u8> for Pallet<T> {
-	fn generate_random(seed: u8) -> u8 {
+impl<T: Config> RandomNumber<u32> for Pallet<T> {
+	fn generate_random(seed: u32) -> u32 {
 		// TODO
 		0
 	}
-	fn generate_random_in_range(total: u8) -> u8 {
+	fn generate_random_in_range(total: u32) -> u32 {
 		// TODO
 		0
 	}
