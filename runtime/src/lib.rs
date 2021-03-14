@@ -262,7 +262,7 @@ parameter_types! {
 impl mc_nft::Config for Runtime {
 	type Event = Event;
 	type CommodityAdmin = frame_system::EnsureRoot<AccountId>;
-	type CommodityInfo = ();
+	type CommodityInfo = mc_nft::CommodityInfo;
 	type CommodityLimit = MaxNfts;
 	type UserCommodityLimit = MaxNftsPerUser;
 }
