@@ -1,11 +1,20 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use sp_std::{fmt::Debug, prelude::*};
 use sp_runtime::{
-	ModuleId,
-	traits::{ AccountIdConversion, }
+	RuntimeDebug, ModuleId,
+	traits::{
+		AccountIdConversion, AtLeast32BitUnsigned, StaticLookup,
+		Zero,
+		// Saturating, CheckedSub, CheckedAdd,
+	},
 };
-use frame_support::traits::{
-	Get, Randomness
+use frame_support::{
+	// ensure,
+	traits::{
+		Get, Randomness, Currency, ReservableCurrency
+	},
+	// dispatch::DispatchError,
 };
 use codec::{Encode, Decode};
 use mc_support::traits::{
@@ -14,13 +23,15 @@ use mc_support::traits::{
 
 pub use pallet::*;
 
+type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
+
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_system::pallet_prelude::*;
 	use frame_support::{
+		dispatch::DispatchResultWithPostInfo,
 		pallet_prelude::*,
-		dispatch::DispatchResultWithPostInfo
 	};
+	use frame_system::pallet_prelude::*;
 
 	use super::*;
 
@@ -31,15 +42,21 @@ pub mod pallet {
 	/// The module configuration trait.
 	#[pallet::config]
 	pub trait Config: frame_system::Config {
+		/// The overarching event type.
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
 		#[pallet::constant]
 		/// The Lottery's module id
 		type ModuleId: Get<ModuleId>;
 
+		/// The units in which we record balances.
+		type Balance: Member + Parameter + AtLeast32BitUnsigned + Default + Copy;
+
+		/// The currency mechanism.
+		type Currency: ReservableCurrency<Self::AccountId>;
+
 		/// Something that provides randomness in the runtime.
 		type Randomness: Randomness<Self::Hash>;
-
-		/// The overarching event type.
-		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The manager origin.
 		type ManagerOrigin: EnsureOrigin<Self::Origin>;
@@ -51,29 +68,72 @@ pub mod pallet {
 	}
 
 	#[pallet::hooks]
-	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {}
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		// TODO on finalized
+	}
 
-	// Dispatchable functions allows users to interact with the pallet and invoke state changes.
-	// These functions materialize as "extrinsics", which are often compared to transactions.
-	// Dispatchable functions must be annotated with a weight and must return a DispatchResult.
 	#[pallet::call]
 	impl<T:Config> Pallet<T> {
-		/// An example dispatchable that takes a singles value as a parameter, writes the value to
-		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
-		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
-		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResultWithPostInfo {
-			// ensure_signed(origin)?;
+		/// Setup up manager
+		///
+		/// - `manager`: The manager of nature
+		///
+		/// Emits `ManagerAdded` event when successful.
+		///
+		/// Weight: `O(0)`
+		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
+		pub(super) fn set_manager(
+			origin: OriginFor<T>,
+			manager: <T::Lookup as StaticLookup>::Source,
+		) -> DispatchResultWithPostInfo {
+			T::ManagerOrigin::ensure_origin(origin)?;
+			let manager = T::Lookup::lookup(manager)?;
 
-			// let who = T::ModuleId::get().into_account();
+			ensure!(!Managers::<T>::contains_key(manager.clone()), Error::<T>::InUse);
 
-			// // Update storage.
-			// Something::<T>::put(something);
+			// Update manager.
+			Managers::<T>::insert(manager.clone(), ManagerInfo {
+				deposit: Zero::zero(),
+				is_admin: true,
+				is_issuer: true,
+				is_freezer: true,
+			});
 
-			// // Emit an event.
-			// Self::deposit_event(Event::SomethingStored(something, who));
-			// // Return a successful DispatchResultWithPostInfo
+			// Emit event.
+			Self::deposit_event(Event::ManagerAdded(manager));
+			// Return a successful DispatchResultWithPostInfo
 			Ok(().into())
 		}
+
+		/// Unset some manager
+		///
+		/// - `who`: The old manager of nature
+		///
+		/// Emits `ManagerRemoved` event when successful.
+		///
+		/// Weight: `O(0)`
+		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
+		pub(super) fn unset_manager(
+			origin: OriginFor<T>,
+			who: <T::Lookup as StaticLookup>::Source,
+		) -> DispatchResultWithPostInfo {
+			T::ManagerOrigin::ensure_origin(origin)?;
+			let one = T::Lookup::lookup(who)?;
+
+			Managers::<T>::try_mutate_exists(one.clone(), |maybe_manager| {
+				let info = maybe_manager.take().ok_or(Error::<T>::NotManager)?;
+
+				if !info.deposit.is_zero() {
+					T::Currency::unreserve(&one, info.deposit);
+				}
+
+				*maybe_manager = None;
+				// Emit event.
+				Self::deposit_event(Event::ManagerRemoved(one));
+				Ok(().into())
+			})
+		}
+
 	}
 
 	// The pallet's runtime storage items.
@@ -84,8 +144,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		T::AccountId,
-		u32,
-		OptionQuery
+		ManagerInfo<BalanceOf<T>>
 	>;
 
 	// Pallets use events to inform users when important changes are made.
@@ -116,6 +175,20 @@ pub mod pallet {
 	}
 }
 
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
+pub struct ManagerInfo<
+	Balance: Encode + Decode + Clone + Debug + Eq + PartialEq,
+> {
+	/// The balance.
+	deposit: Balance,
+	/// Whether the account is an admin.
+	is_admin: bool,
+	/// Whether the account is an issuer
+	is_issuer: bool,
+	/// Whether the account is an freezer
+	is_freezer: bool,
+}
+
 // The main implementation block for the module.
 impl<T: Config> Pallet<T> {
 	// Public immutables
@@ -134,19 +207,16 @@ impl<T: Config> ModuleAccessor<T::AccountId> for Pallet<T> {
 		Self::account_id()
 	}
 	/// Can thaw tokens, force transfers and burn tokens from any account.
-	fn is_admin(_: &T::AccountId) -> bool {
-		// TODO
-		false
+	fn is_admin(who: &T::AccountId) -> bool {
+		Managers::<T>::get(who).map(|x| x.is_admin).unwrap_or(false)
 	}
 	/// Can mint tokens.
-	fn is_issuer(_: &T::AccountId) -> bool {
-		// TODO
-		false
+	fn is_issuer(who: &T::AccountId) -> bool {
+		Managers::<T>::get(who).map(|x| x.is_issuer).unwrap_or(false)
 	}
 	/// Can freeze tokens.
-	fn is_freezer(_: &T::AccountId) -> bool {
-		// TODO
-		false
+	fn is_freezer(who: &T::AccountId) -> bool {
+		Managers::<T>::get(who).map(|x| x.is_freezer).unwrap_or(false)
 	}
 }
 
