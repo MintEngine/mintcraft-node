@@ -224,7 +224,6 @@ pub mod pallet {
 			min_balance: T::Balance,
 		) -> DispatchResultWithPostInfo {
 			let owner = ensure_signed(origin)?;
-			let admin = T::AssetAdmin::get_owner_id();
 
 			ensure!(!Asset::<T>::contains_key(id), Error::<T>::InUse);
 			ensure!(!min_balance.is_zero(), Error::<T>::MinBalanceZero);
@@ -236,9 +235,6 @@ pub mod pallet {
 
 			Asset::<T>::insert(id, AssetDetails {
 				owner: owner.clone(),
-				issuer: admin.clone(),
-				admin: admin.clone(),
-				freezer: admin.clone(),
 				supply: Zero::zero(),
 				deposit,
 				max_zombies,
@@ -248,7 +244,7 @@ pub mod pallet {
 				is_frozen: false,
 				is_featured: false
 			});
-			Self::deposit_event(Event::Created(id, owner, admin));
+			Self::deposit_event(Event::Created(id, owner));
 			Ok(().into())
 		}
 
@@ -289,9 +285,6 @@ pub mod pallet {
 
 			Asset::<T>::insert(id, AssetDetails {
 				owner: owner.clone(),
-				issuer: owner.clone(),
-				admin: owner.clone(),
-				freezer: owner.clone(),
 				supply: Zero::zero(),
 				deposit: Zero::zero(),
 				max_zombies,
@@ -397,7 +390,7 @@ pub mod pallet {
 			Asset::<T>::try_mutate(id, |maybe_details| {
 				let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
 
-				ensure!(&origin == &details.issuer, Error::<T>::NoPermission);
+				ensure!(T::AssetAdmin::is_issuer(&origin), Error::<T>::NoPermission);
 				details.supply = details.supply.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
 
 				Account::<T>::try_mutate(id, &beneficiary, |t| -> DispatchResultWithPostInfo {
@@ -441,7 +434,7 @@ pub mod pallet {
 
 			Asset::<T>::try_mutate(id, |maybe_details| {
 				let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-				ensure!(&origin == &d.admin, Error::<T>::NoPermission);
+				ensure!(T::AssetAdmin::is_admin(&origin), Error::<T>::NoPermission);
 
 				let burned = Account::<T>::try_mutate_exists(
 					id,
@@ -583,7 +576,7 @@ pub mod pallet {
 
 			Asset::<T>::try_mutate(id, |maybe_details| {
 				let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-				ensure!(&origin == &details.admin, Error::<T>::NoPermission);
+				ensure!(T::AssetAdmin::is_admin(&origin), Error::<T>::NoPermission);
 
 				source_account.balance -= amount;
 				if source_account.balance < details.min_balance {
@@ -635,8 +628,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let origin = ensure_signed(origin)?;
 
-			let d = Asset::<T>::get(id).ok_or(Error::<T>::Unknown)?;
-			ensure!(&origin == &d.freezer, Error::<T>::NoPermission);
+			ensure!(T::AssetAdmin::is_freezer(&origin), Error::<T>::NoPermission);
 			let who = T::Lookup::lookup(who)?;
 			ensure!(Account::<T>::contains_key(id, &who), Error::<T>::BalanceZero);
 
@@ -665,8 +657,7 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let origin = ensure_signed(origin)?;
 
-			let details = Asset::<T>::get(id).ok_or(Error::<T>::Unknown)?;
-			ensure!(&origin == &details.admin, Error::<T>::NoPermission);
+			ensure!(T::AssetAdmin::is_admin(&origin), Error::<T>::NoPermission);
 			let who = T::Lookup::lookup(who)?;
 			ensure!(Account::<T>::contains_key(id, &who), Error::<T>::BalanceZero);
 
@@ -694,7 +685,7 @@ pub mod pallet {
 
 			Asset::<T>::try_mutate(id, |maybe_details| {
 				let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-				ensure!(&origin == &d.freezer, Error::<T>::NoPermission);
+				ensure!(T::AssetAdmin::is_freezer(&origin), Error::<T>::NoPermission);
 
 				d.is_frozen = true;
 
@@ -721,7 +712,7 @@ pub mod pallet {
 
 			Asset::<T>::try_mutate(id, |maybe_details| {
 				let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-				ensure!(&origin == &d.admin, Error::<T>::NoPermission);
+				ensure!(T::AssetAdmin::is_admin(&origin), Error::<T>::NoPermission);
 
 				d.is_frozen = false;
 
@@ -763,44 +754,6 @@ pub mod pallet {
 				Ok(().into())
 			})
 		}
-
-		/// Change the Issuer, Admin and Freezer of an asset.
-		///
-		/// Origin must be Signed and the sender should be the Owner of the asset `id`.
-		///
-		/// - `id`: The identifier of the asset to be frozen.
-		/// - `issuer`: The new Issuer of this asset.
-		/// - `admin`: The new Admin of this asset.
-		/// - `freezer`: The new Freezer of this asset.
-		///
-		/// Emits `TeamChanged`.
-		///
-		/// Weight: `O(1)`
-		// #[pallet::weight(T::WeightInfo::set_team())]
-		// pub(super) fn set_team(
-		// 	origin: OriginFor<T>,
-		// 	#[pallet::compact] id: T::AssetId,
-		// 	issuer: <T::Lookup as StaticLookup>::Source,
-		// 	admin: <T::Lookup as StaticLookup>::Source,
-		// 	freezer: <T::Lookup as StaticLookup>::Source,
-		// ) -> DispatchResultWithPostInfo {
-		// 	let origin = ensure_signed(origin)?;
-		// 	let issuer = T::Lookup::lookup(issuer)?;
-		// 	let admin = T::Lookup::lookup(admin)?;
-		// 	let freezer = T::Lookup::lookup(freezer)?;
-
-		// 	Asset::<T>::try_mutate(id, |maybe_details| {
-		// 		let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-		// 		ensure!(&origin == &details.owner, Error::<T>::NoPermission);
-
-		// 		details.issuer = issuer.clone();
-		// 		details.admin = admin.clone();
-		// 		details.freezer = freezer.clone();
-
-		// 		Self::deposit_event(Event::TeamChanged(id, issuer, admin, freezer));
-		// 		Ok(().into())
-		// 	})
-		// }
 
 		/// Set the maximum number of zombie accounts for an asset.
 		///
@@ -923,16 +876,14 @@ pub mod pallet {
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	#[pallet::metadata(T::AccountId = "AccountId", T::Balance = "Balance", T::AssetId = "AssetId")]
 	pub enum Event<T: Config> {
-		/// Some asset class was created. \[asset_id, creator, owner\]
-		Created(T::AssetId, T::AccountId, T::AccountId),
+		/// Some asset class was created. \[asset_id, creator\]
+		Created(T::AssetId, T::AccountId),
 		/// Some assets were issued. \[asset_id, owner, total_supply\]
 		Issued(T::AssetId, T::AccountId, T::Balance),
 		/// Some assets were transferred. \[asset_id, from, to, amount\]
 		Transferred(T::AssetId, T::AccountId, T::AccountId, T::Balance),
 		/// Some assets were destroyed. \[asset_id, owner, balance\]
 		Burned(T::AssetId, T::AccountId, T::Balance),
-		/// The management team changed \[asset_id, issuer, admin, freezer\]
-		TeamChanged(T::AssetId, T::AccountId, T::AccountId, T::AccountId),
 		/// The owner changed \[asset_id, owner\]
 		OwnerChanged(T::AssetId, T::AccountId),
 		/// Some assets was transferred by an admin. \[asset_id, from, to, amount\]
@@ -1037,12 +988,6 @@ pub struct AssetDetails<
 > {
 	/// Can change `owner`, `issuer`, `freezer` and `admin` accounts.
 	owner: AccountId,
-	/// Can mint tokens.
-	issuer: AccountId,
-	/// Can thaw tokens, force transfers and burn tokens from any account.
-	admin: AccountId,
-	/// Can freeze tokens.
-	freezer: AccountId,
 	/// The total supply across all accounts.
 	supply: Balance,
 	/// The balance deposited for this asset.

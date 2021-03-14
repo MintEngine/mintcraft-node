@@ -2,6 +2,19 @@
 
 pub trait ModuleAccessor<AccountId>: Sized {
 	fn get_owner_id() -> AccountId;
+	// Default impls
+	/// Can thaw tokens, force transfers and burn tokens from any account.
+	fn is_admin(_: &AccountId) -> bool {
+		false
+	}
+	/// Can mint tokens.
+	fn is_issuer(_: &AccountId) -> bool {
+		false
+	}
+	/// Can freeze tokens.
+	fn is_freezer(_: &AccountId) -> bool {
+		false
+	}
 }
 
 /// default implement for test
