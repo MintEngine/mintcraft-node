@@ -967,6 +967,14 @@ pub mod pallet {
 		AssetDetails<T::Balance, T::AccountId, BalanceOf<T>>
 	>;
 	#[pallet::storage]
+	/// The Feature of an asset
+	pub(super) type Feature<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AssetId,
+		AssetFeature
+	>;
+	#[pallet::storage]
 	/// The number of units of assets held by any given account.
 	pub(super) type Account<T: Config> = StorageDoubleMap<
 		_,
@@ -984,15 +992,6 @@ pub mod pallet {
 		Blake2_128Concat,
 		T::AssetId,
 		AssetMetadata<BalanceOf<T>>,
-		ValueQuery
-	>;
-	#[pallet::storage]
-	/// The Feature of an asset.Account
-	pub(super) type Feature<T: Config> = StorageMap<
-		_,
-		Blake2_128Concat,
-		T::AssetId,
-		AssetFeature,
 		ValueQuery
 	>;
 }
@@ -1082,6 +1081,11 @@ impl<T: Config> Pallet<T> {
 	/// Check the number of zombies allow yet for an asset.
 	pub fn zombie_allowance(id: T::AssetId) -> u32 {
 		Asset::<T>::get(id).map(|x| x.max_zombies - x.zombies).unwrap_or_else(Zero::zero)
+	}
+
+	/// Get the feature info of the asset
+	pub fn feature(id: T::AssetId) -> Option<AssetFeature> {
+		Feature::<T>::get(id)
 	}
 
 	/// create feature detail by code
