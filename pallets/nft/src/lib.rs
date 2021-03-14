@@ -37,13 +37,18 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::FullCodec;
+use codec::{Decode, Encode};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch, ensure,
     traits::{EnsureOrigin, Get},
     Hashable,
 };
 use frame_system::ensure_signed;
-use sp_runtime::traits::{Hash, Member};
+use sp_runtime::print;
+use sp_runtime::{
+    traits::{Hash, Member},
+    RuntimeDebug,
+};
 use sp_std::{cmp::Eq, fmt::Debug, vec::Vec};
 
 pub mod nft;
@@ -67,6 +72,18 @@ pub trait Config<I = DefaultInstance>: frame_system::Config {
     type Event: From<Event<Self, I>> + Into<<Self as frame_system::Config>::Event>;
 }
 
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
+pub struct CommodityInfo {
+    name: Vec<u8>,
+    version: Vec<u8>,
+}
+
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
+pub struct MetaKeyValue {
+    key: Vec<u8>,
+    value: bool,
+}
+
 /// The runtime system's hashing algorithm is used to uniquely identify commodities.
 pub type CommodityId<T> = <T as frame_system::Config>::Hash;
 
@@ -85,6 +102,8 @@ decl_storage! {
         CommoditiesForAccount get(fn commodities_for_account): map hasher(blake2_128_concat) T::AccountId => Vec<Commodity<T, I>>;
         /// A mapping from a commodity ID to the account that owns it.
         AccountForCommodity get(fn account_for_commodity): map hasher(identity) CommodityId<T> => T::AccountId;
+        /// meta data for current NFT
+        NftMeta get(fn meta_data): map hasher(identity) CommodityId<T> => Vec<MetaKeyValue>;
     }
 
     add_extra_genesis {
@@ -114,6 +133,8 @@ decl_event!(
         Minted(CommodityId, AccountId),
         /// Ownership of the commodity has been transferred to the account.
         Transferred(CommodityId, AccountId),
+        /// change metadata event
+        MetadataEvent(CommodityId, AccountId),
     }
 );
 
@@ -154,8 +175,10 @@ decl_module! {
         /// - `commodity_info`: The information that defines the commodity.
         #[weight = 10_000]
         pub fn mint(origin, owner_account: T::AccountId, commodity_info: T::CommodityInfo) -> dispatch::DispatchResult {
-            T::CommodityAdmin::ensure_origin(origin)?;
-
+            // T::CommodityAdmin::ensure_origin(origin)?;
+            print("mint start...");
+            let who = ensure_signed(origin)?;
+            print("mint end...");
             let commodity_id = <Self as UniqueAssets<_>>::mint(&owner_account, commodity_info)?;
             Self::deposit_event(RawEvent::Minted(commodity_id, owner_account.clone()));
             Ok(())
@@ -196,6 +219,38 @@ decl_module! {
             Self::deposit_event(RawEvent::Transferred(commodity_id.clone(), dest_account.clone()));
             Ok(())
         }
+        /// add meta for a specific nft
+        #[weight = 10_000]
+        pub fn add_meta(origin, commodity_id: CommodityId<T>, key: Vec<u8>, value: bool) -> dispatch::DispatchResult {
+            let who = ensure_signed(origin)?;
+            ensure!(who.clone() == Self::account_for_commodity(&commodity_id), Error::<T, I>::NotCommodityOwner);
+            let mut new_meta = Some(MetaKeyValue { key: key.clone(), value: value.clone() });
+
+            let mut metas = Self::meta_data(commodity_id).into_iter()
+            .filter_map(|l| if l.key == key { new_meta.take() } else { Some(l) })
+            .collect::<Vec<_>>();
+
+            if let Some(meta) = new_meta {
+                metas.push(meta)
+            }
+            if metas.is_empty() {
+                NftMeta::<T, I>::remove(commodity_id);
+            } else {
+                NftMeta::<T, I>::insert(commodity_id, metas);
+            }
+            Self::deposit_event(RawEvent::MetadataEvent(commodity_id, who));
+            Ok(())
+        }
+
+        /// get meta for a specific nft
+         #[weight = 10_000]
+         pub fn get_meta(origin, commodity_id: CommodityId<T>) -> Vec<MetaKeyValue> {
+            let mut metas: Vec<MetaKeyValue> = Vec::new();
+            Self::meta_data(commodity_id).into_iter().map(|o|
+                metas.push(MetaKeyValue{key: o.key, value: o.value })
+            ).collect::<Vec<_>>();
+            metas
+         }
     }
 }
 
