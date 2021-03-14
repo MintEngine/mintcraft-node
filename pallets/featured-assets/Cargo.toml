@@ -29,14 +29,13 @@ frame-support = { version = '3.0.0', default-features = false }
 frame-system = { version = '3.0.0', default-features = false }
 frame-benchmarking = { version = '3.0.0', default-features = false, optional = true }
 # Local dependencies
-mc-support = { path = '../support' }
+mc-support = { default-features = false, path = '../support' }
 
 [dev-dependencies]
-sp-core = { version = '3.0.0' }
-sp-std = { version = '3.0.0' }
-sp-io = { version = '3.0.0' }
-pallet-balances = { version = '3.0.0' }
-mc-nature = { path = '../nature' }
+sp-core = { default-features = false, version = '3.0.0' }
+sp-io = { default-features = false, version = '3.0.0' }
+pallet-balances = { default-features = false, version = '3.0.0' }
+mc-nature = { default-features = false, path = '../nature' }
 
 [features]
 default = ['std']

@@ -19,7 +19,7 @@ package = 'parity-scale-codec'
 version = '2.0.0'
 
 [dependencies]
-serde = { version = '1.0.119', optional = true }
+serde = { version = '1.0.119', optional = true, features = ["derive"] }
 sp-std = { version = '3.0.0', default-features = false }
 # sp-runtime = { default-features = false, version = '3.0.0' }
 # frame-support = { default-features = false, version = '3.0.0' }
@@ -28,7 +28,8 @@ sp-std = { version = '3.0.0', default-features = false }
 [features]
 default = ['std']
 std = [
-    'codec/std',
+	'codec/std',
+	'sp-std/std',
     # 'frame-support/std',
     # 'frame-system/std',
 ]

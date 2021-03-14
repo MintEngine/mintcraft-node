@@ -25,6 +25,7 @@ hex-literal = { optional = true, version = '0.3.1' }
 serde = { features = ['derive'], optional = true, version = '1.0.119' }
 
 # Local dependencies
+mc-support = { default-features = false, path = '../pallets/support' }
 mc-nft = { default-features = false, path = '../pallets/nft' }
 mc-featured-assets = { default-features = false, path = '../pallets/featured-assets' }
 mc-actor = { default-features = false, path = '../pallets/actor' }
@@ -101,6 +102,7 @@ std = [
     'sp-transaction-pool/std',
     'sp-version/std',
     # Local
+    'mc-support/std',
     'mc-nft/std',
     'mc-featured-assets/std',
     'mc-actor/std',

@@ -3198,7 +3198,6 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-core",
- "sp-io",
  "sp-runtime",
 ]
 
@@ -3211,7 +3210,6 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-core",
- "sp-io",
  "sp-runtime",
 ]
 
@@ -3224,7 +3222,6 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-core",
- "sp-io",
  "sp-runtime",
 ]
 
@@ -3255,7 +3252,6 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-core",
- "sp-io",
  "sp-runtime",
 ]
 
@@ -3269,7 +3265,6 @@ dependencies = [
  "parity-scale-codec",
  "serde",
  "sp-core",
- "sp-io",
  "sp-runtime",
 ]
 
@@ -3445,6 +3440,7 @@ dependencies = [
  "mc-implication",
  "mc-nature",
  "mc-nft",
+ "mc-support",
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",
