@@ -126,7 +126,10 @@ use frame_support::{
 	traits::{Currency, ReservableCurrency, BalanceStatus::Reserved},
 	dispatch::DispatchError,
 };
-use mc_support::traits::{ModuleAccessor, RandomNumber};
+use mc_support::{
+	primitives::{FeatureElements, FeatureLevel},
+	traits::{ModuleAccessor, RandomNumber},
+};
 
 pub use weights::WeightInfo;
 pub use pallet::*;
@@ -1048,55 +1051,6 @@ pub struct AssetMetadata<DepositBalance> {
 	decimals: u8,
 }
 
-// Asset 的组合特性
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
-pub enum FeatureHue {
-	Green,
-	Yellow,
-	White,
-	Black,
-	Blue,
-	Red,
-	Orange,
-	Pink,
-	Purple,
-}
-impl Into<u8> for FeatureHue {
-	fn into(self) -> u8 {
-		match self {
-			Self::Green => 1,
-			Self::Yellow => 2,
-			Self::White => 3,
-			Self::Black => 4,
-			Self::Blue => 5,
-			Self::Red => 6,
-			Self::Orange => 7,
-			Self::Pink => 8,
-			Self::Purple => 9,
-		}
-	}
-}
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
-pub enum FeatureElements {
-	One(FeatureHue),
-	Two(FeatureHue, FeatureHue),
-	Three(FeatureHue, FeatureHue, FeatureHue),
-	Four(FeatureHue, FeatureHue, FeatureHue, FeatureHue),
-}
-impl Default for FeatureElements {
-	fn default() -> Self { Self::One(FeatureHue::Green) }
-}
-#[derive(Encode, Decode, Clone, Eq, PartialEq, RuntimeDebug)]
-pub enum FeatureLevel {
-	Lv0,
-	Lv1,
-	Lv2,
-	Lv3,
-}
-impl Default for FeatureLevel {
-	fn default() -> Self { Self::Lv0 }
-}
-
 // Featured Part for asset
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
 pub struct AssetFeature {
@@ -1130,7 +1084,9 @@ impl<T: Config> Pallet<T> {
 	}
 
 	/// create feature detail by point
-	fn new_feature_detail(point: u8) -> AssetFeature {
+	fn new_feature_detail(total_point: u8) -> AssetFeature {
+		// T::RandomNumber::generate_random_in_range(total_point)
+		// let
 		// TODO
 		AssetFeature::default()
 	}
