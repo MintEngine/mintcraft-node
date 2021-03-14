@@ -4,8 +4,12 @@ use sp_runtime::{
 	ModuleId,
 	traits::{ AccountIdConversion, }
 };
-use frame_support::traits::{ Get };
-use mc_support::traits::{ ModuleAccessor };
+use frame_support::traits::{
+	Get, Randomness
+};
+use mc_support::traits::{
+	ModuleAccessor, RandomNumber
+};
 
 pub use pallet::*;
 
@@ -30,8 +34,19 @@ pub mod pallet {
 		/// The Lottery's module id
 		type ModuleId: Get<ModuleId>;
 
+		/// Something that provides randomness in the runtime.
+		type Randomness: Randomness<Self::Hash>;
+
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// The manager origin.
+		type ManagerOrigin: EnsureOrigin<Self::Origin>;
+
+		/// Number of time we should try to generate a random number that has no modulo bias.
+		/// The larger this number, the more potential computation is used for picking the winner,
+		/// but also the more likely that the chosen winner is done fairly.
+		type MaxGenerateRandom: Get<u32>;
 	}
 
 	#[pallet::hooks]
@@ -110,5 +125,31 @@ impl<T: Config> Pallet<T> {
 impl<T: Config> ModuleAccessor<T::AccountId> for Pallet<T> {
 	fn get_owner_id() -> T::AccountId {
 		Self::account_id()
+	}
+	/// Can thaw tokens, force transfers and burn tokens from any account.
+	fn is_admin(_: &T::AccountId) -> bool {
+		// TODO
+		false
+	}
+	/// Can mint tokens.
+	fn is_issuer(_: &T::AccountId) -> bool {
+		// TODO
+		false
+	}
+	/// Can freeze tokens.
+	fn is_freezer(_: &T::AccountId) -> bool {
+		// TODO
+		false
+	}
+}
+
+impl<T: Config> RandomNumber<u8> for Pallet<T> {
+	fn generate_random(seed: u8) -> u8 {
+		// TODO
+		0
+	}
+	fn generate_random_in_range(total: u8) -> u8 {
+		// TODO
+		0
 	}
 }

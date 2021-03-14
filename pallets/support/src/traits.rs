@@ -24,6 +24,15 @@ impl ModuleAccessor<u64> for () {
 	}
 }
 
+pub trait RandomNumber<T> {
+	fn generate_random(seed: T) -> T;
+	fn generate_random_in_range(total: T) -> T;
+}
+impl RandomNumber<u8> for () {
+	fn generate_random(_: u8) -> u8 { 0 }
+	fn generate_random_in_range(_: u8) -> u8 { 0 }
+}
+
 // Implication related traits
 pub trait ImplicationSystem {
 

@@ -126,7 +126,7 @@ use frame_support::{
 	traits::{Currency, ReservableCurrency, BalanceStatus::Reserved},
 	dispatch::DispatchError,
 };
-use mc_support::traits::{ModuleAccessor};
+use mc_support::traits::{ModuleAccessor, RandomNumber};
 
 pub use weights::WeightInfo;
 pub use pallet::*;
@@ -184,8 +184,14 @@ pub mod pallet {
 		/// Weight information for extrinsics in this pallet.
 		type WeightInfo: WeightInfo;
 
-		/// Featured Getters
+		/// Asset Admin is outer module
 		type AssetAdmin: ModuleAccessor<Self::AccountId>;
+
+		/// The maximum value of feature point
+		type AssetFeaturePointLimit: Get<u8>;
+
+		/// Something that provides randomness in the runtime.
+		type RandomNumber: RandomNumber<u8>;
 	}
 
 	#[pallet::hooks]
@@ -222,11 +228,13 @@ pub mod pallet {
 			#[pallet::compact] id: T::AssetId,
 			max_zombies: u32,
 			min_balance: T::Balance,
+			feature_point: u8,
 		) -> DispatchResultWithPostInfo {
 			let owner = ensure_signed(origin)?;
 
 			ensure!(!Asset::<T>::contains_key(id), Error::<T>::InUse);
 			ensure!(!min_balance.is_zero(), Error::<T>::MinBalanceZero);
+			ensure!(!feature_point.is_zero() && feature_point <= T::AssetFeaturePointLimit::get(), Error::<T>::BadFeaturePoint);
 
 			let deposit = T::AssetDepositPerZombie::get()
 				.saturating_mul(max_zombies.into())
@@ -242,8 +250,11 @@ pub mod pallet {
 				zombies: Zero::zero(),
 				accounts: Zero::zero(),
 				is_frozen: false,
-				is_featured: false
+				is_featured: true
 			});
+			// add feature info
+			Feature::<T>::insert(id, Self::new_feature_detail(feature_point));
+
 			Self::deposit_event(Event::Created(id, owner));
 			Ok(().into())
 		}
@@ -939,6 +950,8 @@ pub mod pallet {
 		BadState,
 		/// Invalid metadata given.
 		BadMetadata,
+		/// Invalid feature point.
+		BadFeaturePoint,
 	}
 
 	#[pallet::storage]
@@ -1114,6 +1127,12 @@ impl<T: Config> Pallet<T> {
 	/// Check the number of zombies allow yet for an asset.
 	pub fn zombie_allowance(id: T::AssetId) -> u32 {
 		Asset::<T>::get(id).map(|x| x.max_zombies - x.zombies).unwrap_or_else(Zero::zero)
+	}
+
+	/// create feature detail by point
+	fn new_feature_detail(point: u8) -> AssetFeature {
+		// TODO
+		AssetFeature::default()
 	}
 
 	fn new_account(

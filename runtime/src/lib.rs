@@ -235,6 +235,7 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 	pub const MetadataDepositBase: Balance = 10 * DOLLARS;
 	pub const MetadataDepositPerByte: Balance = 1 * DOLLARS;
+	pub const AssetFeaturePointLimit: u8 = 24;
 }
 impl mc_featured_assets::Config for Runtime {
 	type Event = Event;
@@ -248,7 +249,10 @@ impl mc_featured_assets::Config for Runtime {
 	type MetadataDepositBase = MetadataDepositBase;
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type WeightInfo = mc_featured_assets::weights::SubstrateWeight<Runtime>;
+	// Featured part
+	type AssetFeaturePointLimit = AssetFeaturePointLimit;
 	type AssetAdmin = Nature;
+	type RandomNumber = Nature;
 }
 
 parameter_types! {
@@ -277,11 +281,15 @@ impl mc_cultivate::Config for Runtime {
 
 parameter_types! {
 	pub const NatureModuleId: ModuleId = ModuleId(*b"kis/stpr");
+	pub const MaxGenerateRandom: u32 = 10;
 }
 
 impl mc_nature::Config for Runtime {
 	type Event = Event;
 	type ModuleId = NatureModuleId;
+	type Randomness = RandomnessCollectiveFlip;
+	type ManagerOrigin = frame_system::EnsureRoot<AccountId>;
+	type MaxGenerateRandom = MaxGenerateRandom;
 }
 
 impl mc_dungeons::Config for Runtime {

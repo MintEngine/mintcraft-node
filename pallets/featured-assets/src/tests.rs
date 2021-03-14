@@ -71,6 +71,7 @@ parameter_types! {
 	pub const StringLimit: u32 = 50;
 	pub const MetadataDepositBase: u64 = 1;
 	pub const MetadataDepositPerByte: u64 = 1;
+	pub const AssetFeaturePointLimit: u8 = 24;
 }
 
 impl Config for Test {
@@ -86,6 +87,8 @@ impl Config for Test {
 	type MetadataDepositPerByte = MetadataDepositPerByte;
 	type WeightInfo = ();
 	type AssetAdmin = ();
+	type AssetFeaturePointLimit = AssetFeaturePointLimit;
+	type RandomNumber = ();
 }
 
 pub(crate) fn new_test_ext() -> sp_io::TestExternalities {
@@ -107,7 +110,7 @@ fn basic_minting_should_work() {
 fn lifecycle_should_work() {
 	new_test_ext().execute_with(|| {
 		Balances::make_free_balance_be(&1, 100);
-		assert_ok!(Assets::create(Origin::signed(1), 0, 10, 1));
+		assert_ok!(Assets::create(Origin::signed(1), 0, 10, 1, 10));
 		assert_eq!(Balances::reserved_balance(&1), 11);
 		assert!(Asset::<Test>::contains_key(0));
 
@@ -126,7 +129,7 @@ fn lifecycle_should_work() {
 		assert!(!Metadata::<Test>::contains_key(0));
 		assert_eq!(Account::<Test>::iter_prefix(0).count(), 0);
 
-		assert_ok!(Assets::create(Origin::signed(1), 0, 10, 1));
+		assert_ok!(Assets::create(Origin::signed(1), 0, 10, 1, 10));
 		assert_eq!(Balances::reserved_balance(&1), 11);
 		assert!(Asset::<Test>::contains_key(0));
 
@@ -341,7 +344,7 @@ fn transfer_owner_should_work() {
 	new_test_ext().execute_with(|| {
 		Balances::make_free_balance_be(&1, 100);
 		Balances::make_free_balance_be(&2, 1);
-		assert_ok!(Assets::create(Origin::signed(1), 0, 10, 1));
+		assert_ok!(Assets::create(Origin::signed(1), 0, 10, 1, 10));
 
 		assert_eq!(Balances::reserved_balance(&1), 11);
 
