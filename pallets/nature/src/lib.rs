@@ -62,16 +62,16 @@ pub mod pallet {
 		/// storage and emits an event. This function must be dispatched by a signed extrinsic.
 		#[pallet::weight(10_000 + T::DbWeight::get().writes(1))]
 		pub fn do_something(origin: OriginFor<T>, something: u32) -> DispatchResultWithPostInfo {
-			ensure_signed(origin)?;
+			// ensure_signed(origin)?;
 
-			let who = T::ModuleId::get().into_account();
+			// let who = T::ModuleId::get().into_account();
 
-			// Update storage.
-			Something::<T>::put(something);
+			// // Update storage.
+			// Something::<T>::put(something);
 
-			// Emit an event.
-			Self::deposit_event(Event::SomethingStored(something, who));
-			// Return a successful DispatchResultWithPostInfo
+			// // Emit an event.
+			// Self::deposit_event(Event::SomethingStored(something, who));
+			// // Return a successful DispatchResultWithPostInfo
 			Ok(().into())
 		}
 	}
@@ -79,11 +79,14 @@ pub mod pallet {
 	// The pallet's runtime storage items.
 	// https://substrate.dev/docs/en/knowledgebase/runtime/storage
 	#[pallet::storage]
-	#[pallet::getter(fn something)]
-	// Learn more about declaring storage items:
-	// https://substrate.dev/docs/en/knowledgebase/runtime/storage#declaring-storage-items
-	pub type Something<T> = StorageValue<_, u32>;
-
+	#[pallet::getter(fn managers)]
+	pub(super) type Managers<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		u32,
+		OptionQuery
+	>;
 
 	// Pallets use events to inform users when important changes are made.
 	// https://substrate.dev/docs/en/knowledgebase/runtime/events
@@ -91,9 +94,10 @@ pub mod pallet {
 	#[pallet::metadata(T::AccountId = "AccountId")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		/// Event documentation should end with an array that provides descriptive names for event
-		/// parameters. [something, who]
-		SomethingStored(u32, T::AccountId),
+		/// Manager was added. \[who\]
+		ManagerAdded(T::AccountId),
+		/// Manager was removed. \[who\]
+		ManagerRemoved(T::AccountId),
 	}
 
 	#[deprecated(note = "use `Event` instead")]
@@ -103,10 +107,12 @@ pub mod pallet {
 	// Errors inform users that something went wrong.
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Error names should be descriptive.
-		NoneValue,
-		/// Errors should have helpful documentation associated with them.
-		StorageOverflow,
+		/// The given account id is unknown.
+		Unknown,
+		/// The account id is already a manager.
+		InUse,
+		/// The account id is not a manager.
+		NotManager,
 	}
 }
 
