@@ -60,8 +60,8 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Config<I = DefaultInstance>: frame_system::Config {
-    type Event: From<Event<Self, I>> + Into<<Self as frame_system::Config>::Event>;
+pub trait Config: frame_system::Config {
+    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
 
     /// The dispatch origin that is able to mint new instances of this type of commodity.
     type CommodityAdmin: EnsureOrigin<Self::Origin>;
@@ -97,13 +97,13 @@ pub struct ExistInfo<BlockNumber> {
 pub type CommodityId<T> = <T as frame_system::Config>::Hash;
 
 /// Associates a commodity with its ID.
-pub type Commodity<T, I> = (CommodityId<T>, <T as Config<I>>::CommodityInfo);
+pub type Commodity<T> = (CommodityId<T>, <T as Config>::CommodityInfo);
 
 /// exist info of nft
 pub type ExistInfoOf<T> = ExistInfo<<T as frame_system::Config>::BlockNumber>;
 
 decl_storage! {
-    trait Store for Module<T: Config<I>, I: Instance = DefaultInstance> as Commodity {
+    trait Store for Module<T: Config> as Commodity {
         /// The total number of this type of commodity that exists (minted - burned).
         Total get(fn total): u128 = 0;
         /// The total number of this type of commodity that has been burned (may overflow).
@@ -111,7 +111,7 @@ decl_storage! {
         /// The total number of this type of commodity owned by an account.
         TotalForAccount get(fn total_for_account): map hasher(blake2_128_concat) T::AccountId => u64 = 0;
         /// A mapping from an account to a list of all of the commodities of this type that are owned by it.
-        CommoditiesForAccount get(fn commodities_for_account): map hasher(blake2_128_concat) T::AccountId => Vec<Commodity<T, I>>;
+        CommoditiesForAccount get(fn commodities_for_account): map hasher(blake2_128_concat) T::AccountId => Vec<Commodity<T>>;
         /// A mapping from a commodity ID to the account that owns it.
         AccountForCommodity get(fn account_for_commodity): map hasher(identity) CommodityId<T> => T::AccountId;
         /// meta data for current NFT
@@ -122,10 +122,10 @@ decl_storage! {
 
     add_extra_genesis {
         config(balances): Vec<(T::AccountId, Vec<T::CommodityInfo>)>;
-        build(|config: &GenesisConfig<T, I>| {
+        build(|config: &GenesisConfig<T>| {
             for (who, assets) in config.balances.iter() {
                 for asset in assets {
-                    match <Module::<T, I> as UniqueAssets::<T::AccountId>>::mint(who, asset.clone()) {
+                    match <Module::<T> as UniqueAssets::<T::AccountId>>::mint(who, asset.clone()) {
                         Ok(_) => {}
                         Err(err) => { panic!(err) },
                     }
@@ -136,7 +136,7 @@ decl_storage! {
 }
 
 decl_event!(
-    pub enum Event<T, I = DefaultInstance>
+    pub enum Event<T>
     where
         CommodityId = <T as frame_system::Config>::Hash,
         AccountId = <T as frame_system::Config>::AccountId,
@@ -153,7 +153,7 @@ decl_event!(
 );
 
 decl_error! {
-    pub enum Error for Module<T: Config<I>, I: Instance> {
+    pub enum Error for Module<T: Config> {
         // Thrown when there is an attempt to mint a duplicate commodity.
         CommodityExists,
         // Thrown when there is an attempt to burn or transfer a nonexistent commodity.
@@ -170,8 +170,8 @@ decl_error! {
 }
 
 decl_module! {
-    pub struct Module<T: Config<I>, I: Instance = DefaultInstance> for enum Call where origin: T::Origin {
-        type Error = Error<T, I>;
+    pub struct Module<T: Config> for enum Call where origin: T::Origin {
+        type Error = Error<T>;
         fn deposit_event() = default;
 
         /// Create a new commodity from the provided commodity info and identify the specified
@@ -189,11 +189,11 @@ decl_module! {
         /// - `commodity_info`: The information that defines the commodity.
         #[weight = 10_000]
         pub fn mint(origin, owner_account: T::AccountId, commodity_info: T::CommodityInfo) -> dispatch::DispatchResult {
-            // T::CommodityAdmin::ensure_origin(origin)?;
-            ensure_signed(origin)?;
+            T::CommodityAdmin::ensure_origin(origin)?;
+            // ensure_signed(origin)?;
             let commodity_id = <Self as UniqueAssets<_>>::mint(&owner_account, commodity_info)?;
             // add exist info
-            NftExistInfo::<T, I>::insert(commodity_id, ExistInfo {
+            NftExistInfo::<T>::insert(commodity_id, ExistInfo {
                 generated_at: <frame_system::Module<T>>::block_number(),
                 decayed_at: <frame_system::Module<T>>::block_number() + T::LifeTime::base_age(0),
             });
@@ -210,7 +210,7 @@ decl_module! {
         #[weight = 10_000]
         pub fn burn(origin, commodity_id: CommodityId<T>) -> dispatch::DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(who == Self::account_for_commodity(&commodity_id), Error::<T, I>::NotCommodityOwner);
+            ensure!(who == Self::account_for_commodity(&commodity_id), Error::<T>::NotCommodityOwner);
 
             <Self as UniqueAssets<_>>::burn(&commodity_id)?;
             Self::deposit_event(RawEvent::Burned(commodity_id.clone()));
@@ -230,7 +230,7 @@ decl_module! {
         #[weight = 10_000]
         pub fn transfer(origin, dest_account: T::AccountId, commodity_id: CommodityId<T>) -> dispatch::DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(who == Self::account_for_commodity(&commodity_id), Error::<T, I>::NotCommodityOwner);
+            ensure!(who == Self::account_for_commodity(&commodity_id), Error::<T>::NotCommodityOwner);
 
             <Self as UniqueAssets<_>>::transfer(&dest_account, &commodity_id)?;
             Self::deposit_event(RawEvent::Transferred(commodity_id.clone(), dest_account.clone()));
@@ -240,7 +240,7 @@ decl_module! {
         #[weight = 10_000]
         pub fn add_meta(origin, commodity_id: CommodityId<T>, key: Vec<u8>, value: bool) -> dispatch::DispatchResult {
             let who = ensure_signed(origin)?;
-            ensure!(who.clone() == Self::account_for_commodity(&commodity_id), Error::<T, I>::NotCommodityOwner);
+            ensure!(who.clone() == Self::account_for_commodity(&commodity_id), Error::<T>::NotCommodityOwner);
             let mut new_meta = Some(MetaKeyValue { key: key.clone(), value: value.clone() });
 
             let mut metas = Self::meta_data(commodity_id).into_iter()
@@ -251,9 +251,9 @@ decl_module! {
                 metas.push(meta)
             }
             if metas.is_empty() {
-                NftMeta::<T, I>::remove(commodity_id);
+                NftMeta::<T>::remove(commodity_id);
             } else {
-                NftMeta::<T, I>::insert(commodity_id, metas);
+                NftMeta::<T>::insert(commodity_id, metas);
             }
             Self::deposit_event(RawEvent::MetadataEvent(commodity_id, who));
             Ok(())
@@ -262,7 +262,7 @@ decl_module! {
     }
 }
 
-impl<T: Config<I>, I: Instance> UniqueAssets<T::AccountId> for Module<T, I> {
+impl<T: Config> UniqueAssets<T::AccountId> for Module<T> {
     type AssetId = CommodityId<T>;
     type AssetInfo = T::CommodityInfo;
     type AssetLimit = T::CommodityLimit;
@@ -280,7 +280,7 @@ impl<T: Config<I>, I: Instance> UniqueAssets<T::AccountId> for Module<T, I> {
         Self::total_for_account(account)
     }
 
-    fn assets_for_account(account: &T::AccountId) -> Vec<Commodity<T, I>> {
+    fn assets_for_account(account: &T::AccountId) -> Vec<Commodity<T>> {
         Self::commodities_for_account(account)
     }
 
@@ -290,36 +290,36 @@ impl<T: Config<I>, I: Instance> UniqueAssets<T::AccountId> for Module<T, I> {
 
     fn mint(
         owner_account: &T::AccountId,
-        commodity_info: <T as Config<I>>::CommodityInfo,
+        commodity_info: <T>::CommodityInfo,
     ) -> dispatch::result::Result<CommodityId<T>, dispatch::DispatchError> {
         let commodity_id = T::Hashing::hash_of(&commodity_info);
 
         ensure!(
-            !AccountForCommodity::<T, I>::contains_key(&commodity_id),
-            Error::<T, I>::CommodityExists
+            !AccountForCommodity::<T>::contains_key(&commodity_id),
+            Error::<T>::CommodityExists
         );
 
         ensure!(
             Self::total_for_account(owner_account) < T::UserCommodityLimit::get(),
-            Error::<T, I>::TooManyCommoditiesForAccount
+            Error::<T>::TooManyCommoditiesForAccount
         );
 
         ensure!(
             Self::total() < T::CommodityLimit::get(),
-            Error::<T, I>::TooManyCommodities
+            Error::<T>::TooManyCommodities
         );
 
         let new_commodity = (commodity_id, commodity_info);
 
-        Total::<I>::mutate(|total| *total += 1);
-        TotalForAccount::<T, I>::mutate(owner_account, |total| *total += 1);
-        CommoditiesForAccount::<T, I>::mutate(owner_account, |commodities| {
+        Total::<>::mutate(|total| *total += 1);
+        TotalForAccount::<T>::mutate(owner_account, |total| *total += 1);
+        CommoditiesForAccount::<T>::mutate(owner_account, |commodities| {
             match commodities.binary_search(&new_commodity) {
                 Ok(_pos) => {} // should never happen
                 Err(pos) => commodities.insert(pos, new_commodity),
             }
         });
-        AccountForCommodity::<T, I>::insert(commodity_id, &owner_account);
+        AccountForCommodity::<T>::insert(commodity_id, &owner_account);
 
         Ok(commodity_id)
     }
@@ -328,24 +328,24 @@ impl<T: Config<I>, I: Instance> UniqueAssets<T::AccountId> for Module<T, I> {
         let owner = Self::owner_of(commodity_id);
         ensure!(
             owner != T::AccountId::default(),
-            Error::<T, I>::NonexistentCommodity
+            Error::<T>::NonexistentCommodity
         );
 
-        let burn_commodity = (*commodity_id, <T as Config<I>>::CommodityInfo::default());
+        let burn_commodity = (*commodity_id, <T>::CommodityInfo::default());
 
-        Total::<I>::mutate(|total| *total -= 1);
-        Burned::<I>::mutate(|total| *total += 1);
-        TotalForAccount::<T, I>::mutate(&owner, |total| *total -= 1);
-        CommoditiesForAccount::<T, I>::mutate(owner, |commodities| {
+        Total::<>::mutate(|total| *total -= 1);
+        Burned::<>::mutate(|total| *total += 1);
+        TotalForAccount::<T>::mutate(&owner, |total| *total -= 1);
+        CommoditiesForAccount::<T>::mutate(owner, |commodities| {
             let pos = commodities
                 .binary_search(&burn_commodity)
                 .expect("We already checked that we have the correct owner;");
             commodities.remove(pos);
         });
-        AccountForCommodity::<T, I>::remove(&commodity_id);
+        AccountForCommodity::<T>::remove(&commodity_id);
         // remove meta and exist info
-        NftMeta::<T, I>::remove(&commodity_id);
-        NftExistInfo::<T, I>::remove(&commodity_id);
+        NftMeta::<T>::remove(&commodity_id);
+        NftExistInfo::<T>::remove(&commodity_id);
 
         Ok(())
     }
@@ -357,31 +357,31 @@ impl<T: Config<I>, I: Instance> UniqueAssets<T::AccountId> for Module<T, I> {
         let owner = Self::owner_of(&commodity_id);
         ensure!(
             owner != T::AccountId::default(),
-            Error::<T, I>::NonexistentCommodity
+            Error::<T>::NonexistentCommodity
         );
 
         ensure!(
             Self::total_for_account(dest_account) < T::UserCommodityLimit::get(),
-            Error::<T, I>::TooManyCommoditiesForAccount
+            Error::<T>::TooManyCommoditiesForAccount
         );
 
-        let xfer_commodity = (*commodity_id, <T as Config<I>>::CommodityInfo::default());
+        let xfer_commodity = (*commodity_id, <T>::CommodityInfo::default());
 
-        TotalForAccount::<T, I>::mutate(&owner, |total| *total -= 1);
-        TotalForAccount::<T, I>::mutate(dest_account, |total| *total += 1);
-        let commodity = CommoditiesForAccount::<T, I>::mutate(owner, |commodities| {
+        TotalForAccount::<T>::mutate(&owner, |total| *total -= 1);
+        TotalForAccount::<T>::mutate(dest_account, |total| *total += 1);
+        let commodity = CommoditiesForAccount::<T>::mutate(owner, |commodities| {
             let pos = commodities
                 .binary_search(&xfer_commodity)
                 .expect("We already checked that we have the correct owner; qed");
             commodities.remove(pos)
         });
-        CommoditiesForAccount::<T, I>::mutate(dest_account, |commodities| {
+        CommoditiesForAccount::<T>::mutate(dest_account, |commodities| {
             match commodities.binary_search(&commodity) {
                 Ok(_pos) => {} // should never happen
                 Err(pos) => commodities.insert(pos, commodity),
             }
         });
-        AccountForCommodity::<T, I>::insert(&commodity_id, &dest_account);
+        AccountForCommodity::<T>::insert(&commodity_id, &dest_account);
 
         Ok(())
     }
