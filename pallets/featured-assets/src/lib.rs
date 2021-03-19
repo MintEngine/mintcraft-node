@@ -112,7 +112,6 @@
 mod tests;
 
 pub mod weights;
-pub mod traits;
 
 use sp_std::{fmt::Debug, prelude::*};
 use sp_runtime::{
@@ -125,25 +124,21 @@ use codec::{Encode, Decode, HasCompact};
 use frame_support::{
 	ensure,
 	traits::{Currency, ReservableCurrency, BalanceStatus::Reserved},
-	dispatch::DispatchError,
+	dispatch::{DispatchError, DispatchResultWithPostInfo},
 };
 use mc_support::{
-	primitives::{FeatureElements, FeatureLevel, FeatureDestinyRank, FeatureRankedLevel},
-	traits::{ManagerAccessor, RandomNumber},
+	primitives::{AssetFeature, FeatureElements, FeatureLevel, FeatureDestinyRank, FeatureRankedLevel},
+	traits::{ManagerAccessor, RandomNumber, FeaturedAssets},
 };
 
 pub use weights::WeightInfo;
-pub use traits::*;
 pub use pallet::*;
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
-	use frame_support::{
-		dispatch::DispatchResultWithPostInfo,
-		pallet_prelude::*,
-	};
+	use frame_support::pallet_prelude::*;
 	use frame_system::pallet_prelude::*;
 	use super::*;
 
@@ -402,26 +397,14 @@ pub mod pallet {
 			#[pallet::compact] amount: T::Balance
 		) -> DispatchResultWithPostInfo {
 			let origin = ensure_signed(origin)?;
+
+			ensure!(T::AssetAdmin::is_issuer(&origin), Error::<T>::NoPermission);
+
 			let beneficiary = T::Lookup::lookup(beneficiary)?;
 
-			Asset::<T>::try_mutate(id, |maybe_details| {
-				let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+			<Self as FeaturedAssets<_>>::mint(id, &beneficiary, amount)?;
 
-				ensure!(T::AssetAdmin::is_issuer(&origin), Error::<T>::NoPermission);
-				details.supply = details.supply.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
-
-				Account::<T>::try_mutate(id, &beneficiary, |t| -> DispatchResultWithPostInfo {
-					let new_balance = t.balance.saturating_add(amount);
-					ensure!(new_balance >= details.min_balance, Error::<T>::BalanceLow);
-					if t.balance.is_zero() {
-						t.is_zombie = Self::new_account(&beneficiary, details)?;
-					}
-					t.balance = new_balance;
-					Ok(().into())
-				})?;
-				Self::deposit_event(Event::Issued(id, beneficiary, amount));
-				Ok(().into())
-			})
+			Ok(().into())
 		}
 
 		/// Reduce the balance of `who` by as much as possible up to `amount` assets of `id`.
@@ -447,35 +430,14 @@ pub mod pallet {
 			#[pallet::compact] amount: T::Balance
 		) -> DispatchResultWithPostInfo {
 			let origin = ensure_signed(origin)?;
+
+			ensure!(T::AssetAdmin::is_admin(&origin), Error::<T>::NoPermission);
+
 			let who = T::Lookup::lookup(who)?;
 
-			Asset::<T>::try_mutate(id, |maybe_details| {
-				let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-				ensure!(T::AssetAdmin::is_admin(&origin), Error::<T>::NoPermission);
+			<Self as FeaturedAssets<_>>::burn(id, &who, amount)?;
 
-				let burned = Account::<T>::try_mutate_exists(
-					id,
-					&who,
-					|maybe_account| -> Result<T::Balance, DispatchError> {
-						let mut account = maybe_account.take().ok_or(Error::<T>::BalanceZero)?;
-						let mut burned = amount.min(account.balance);
-						account.balance -= burned;
-						*maybe_account = if account.balance < d.min_balance {
-							burned += account.balance;
-							Self::dead_account(&who, d, account.is_zombie);
-							None
-						} else {
-							Some(account)
-						};
-						Ok(burned)
-					}
-				)?;
-
-				d.supply = d.supply.saturating_sub(burned);
-
-				Self::deposit_event(Event::Burned(id, who, burned));
-				Ok(().into())
-			})
+			Ok(().into())
 		}
 
 		/// Move some assets from the sender account to another.
@@ -505,51 +467,11 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let origin = ensure_signed(origin)?;
 			ensure!(!amount.is_zero(), Error::<T>::AmountZero);
-
-			let mut origin_account = Account::<T>::get(id, &origin);
-			ensure!(!origin_account.is_frozen, Error::<T>::Frozen);
-			origin_account.balance = origin_account.balance.checked_sub(&amount)
-				.ok_or(Error::<T>::BalanceLow)?;
-
 			let dest = T::Lookup::lookup(target)?;
-			Asset::<T>::try_mutate(id, |maybe_details| {
-				let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
-				ensure!(!details.is_frozen, Error::<T>::Frozen);
 
-				if dest == origin {
-					return Ok(().into())
-				}
+			<Self as FeaturedAssets<_>>::transfer(id, &origin, &dest, amount)?;
 
-				let mut amount = amount;
-				if origin_account.balance < details.min_balance {
-					amount += origin_account.balance;
-					origin_account.balance = Zero::zero();
-				}
-
-				Account::<T>::try_mutate(id, &dest, |a| -> DispatchResultWithPostInfo {
-					let new_balance = a.balance.saturating_add(amount);
-					ensure!(new_balance >= details.min_balance, Error::<T>::BalanceLow);
-					if a.balance.is_zero() {
-						a.is_zombie = Self::new_account(&dest, details)?;
-					}
-					a.balance = new_balance;
-					Ok(().into())
-				})?;
-
-				match origin_account.balance.is_zero() {
-					false => {
-						Self::dezombify(&origin, details, &mut origin_account.is_zombie);
-						Account::<T>::insert(id, &origin, &origin_account)
-					}
-					true => {
-						Self::dead_account(&origin, details, origin_account.is_zombie);
-						Account::<T>::remove(id, &origin);
-					}
-				}
-
-				Self::deposit_event(Event::Transferred(id, origin, dest, amount));
-				Ok(().into())
-			})
+			Ok(().into())
 		}
 
 		/// Move some assets from one account to another.
@@ -1053,29 +975,148 @@ pub struct AssetMetadata<DepositBalance> {
 	decimals: u8,
 }
 
+impl<T: Config> FeaturedAssets<T::AccountId> for Pallet<T> {
+	/// The type used to identify unique assets.
+	type AssetId = T::AssetId;
+	type Amount = T::Balance;
+	type Balance = T::Balance;
+
+	/// Get the total supply of an asset `id`
+	fn total_supply(id: Self::AssetId) -> Self::Amount {
+		Asset::<T>::get(id).map(|x| x.supply).unwrap_or_else(Zero::zero)
+	}
+
+	/// Get the asset `id` balance of `who`.
+	fn balance(id: Self::AssetId, who: T::AccountId) -> Self::Balance {
+		Account::<T>::get(id, &who).balance
+	}
+
+	/// Get the feature info of the asset
+	fn feature(id: Self::AssetId) -> Option<AssetFeature> {
+		Feature::<T>::get(id).into()
+	}
+
+	/// Mint for the specified user.
+	fn mint(
+		id: Self::AssetId,
+		beneficiary: &T::AccountId,
+		amount: Self::Balance,
+	) -> DispatchResultWithPostInfo {
+		Asset::<T>::try_mutate(id, |maybe_details| {
+			let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+
+			details.supply = details.supply.checked_add(&amount).ok_or(Error::<T>::Overflow)?;
+
+			Account::<T>::try_mutate(id, &beneficiary, |t| -> DispatchResultWithPostInfo {
+				let new_balance = t.balance.saturating_add(amount);
+				ensure!(new_balance >= details.min_balance, Error::<T>::BalanceLow);
+				if t.balance.is_zero() {
+					t.is_zombie = Self::new_account(&beneficiary, details)?;
+				}
+				t.balance = new_balance;
+				Ok(().into())
+			})?;
+
+			Self::deposit_event(Event::<T>::Issued(id, beneficiary.clone(), amount));
+			Ok(().into())
+		})
+	}
+
+	/// Burn asset.
+	fn burn(
+		id: Self::AssetId,
+		who: &T::AccountId,
+		amount: Self::Balance,
+	) -> DispatchResultWithPostInfo {
+		Asset::<T>::try_mutate(id, |maybe_details| {
+			let d = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+
+			let burned = Account::<T>::try_mutate_exists(
+				id,
+				&who,
+				|maybe_account| -> Result<T::Balance, DispatchError> {
+					let mut account = maybe_account.take().ok_or(Error::<T>::BalanceZero)?;
+					let mut burned = amount.min(account.balance);
+					account.balance -= burned;
+					*maybe_account = if account.balance < d.min_balance {
+						burned += account.balance;
+						Self::dead_account(&who, d, account.is_zombie);
+						None
+					} else {
+						Some(account)
+					};
+					Ok(burned)
+				}
+			)?;
+
+			d.supply = d.supply.saturating_sub(burned);
+
+			Self::deposit_event(Event::<T>::Burned(id, who.clone(), burned));
+			Ok(().into())
+		})
+	}
+
+	/// Transfer asset balance to another account.
+	fn transfer(
+		id: Self::AssetId,
+		origin: &T::AccountId,
+		dest: &T::AccountId,
+		amount: Self::Balance,
+	) -> DispatchResultWithPostInfo {
+		let mut origin_account = Account::<T>::get(id, origin);
+		ensure!(!origin_account.is_frozen, Error::<T>::Frozen);
+		origin_account.balance = origin_account.balance.checked_sub(&amount)
+			.ok_or(Error::<T>::BalanceLow)?;
+
+		Asset::<T>::try_mutate(id, |maybe_details| {
+			let details = maybe_details.as_mut().ok_or(Error::<T>::Unknown)?;
+			ensure!(!details.is_frozen, Error::<T>::Frozen);
+
+			if *dest == *origin {
+				return Ok(().into())
+			}
+
+			let mut amount = amount;
+			if origin_account.balance < details.min_balance {
+				amount += origin_account.balance;
+				origin_account.balance = Zero::zero();
+			}
+
+			Account::<T>::try_mutate(id, dest, |a| -> DispatchResultWithPostInfo {
+				let new_balance = a.balance.saturating_add(amount);
+				ensure!(new_balance >= details.min_balance, Error::<T>::BalanceLow);
+				if a.balance.is_zero() {
+					a.is_zombie = Self::new_account(dest, details)?;
+				}
+				a.balance = new_balance;
+				Ok(().into())
+			})?;
+
+			match origin_account.balance.is_zero() {
+				false => {
+					Self::dezombify(origin, details, &mut origin_account.is_zombie);
+					Account::<T>::insert(id, origin, &origin_account)
+				}
+				true => {
+					Self::dead_account(origin, details, origin_account.is_zombie);
+					Account::<T>::remove(id, origin);
+				}
+			}
+
+			Self::deposit_event(Event::<T>::Transferred(id, origin.clone(), dest.clone(), amount));
+			Ok(().into())
+		})
+	}
+}
+
 // The main implementation block for the module.
 impl<T: Config> Pallet<T> {
 	// Public immutables
-
-	/// Get the asset `id` balance of `who`.
-	pub fn balance(id: T::AssetId, who: T::AccountId) -> T::Balance {
-		Account::<T>::get(id, who).balance
-	}
-
-	/// Get the total supply of an asset `id`.
-	pub fn total_supply(id: T::AssetId) -> T::Balance {
-		Asset::<T>::get(id).map(|x| x.supply).unwrap_or_else(Zero::zero)
-	}
 
 	/// Check the number of zombies allow yet for an asset.
 	pub fn zombie_allowance(id: T::AssetId) -> u32 {
 		Asset::<T>::get(id).map(|x| x.max_zombies - x.zombies).unwrap_or_else(Zero::zero)
 	}
-
-	// /// Get the feature info of the asset
-	// pub fn feature(id: T::AssetId) -> Option<AssetFeatureInfo> {
-	// 	Feature::<T>::get(id).into()
-	// }
 
 	/// create feature detail by code
 	/// usage: 0x0(Destiny) 0(lightness) 00(saturation) 00 00(Color)

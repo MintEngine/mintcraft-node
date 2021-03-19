@@ -47,10 +47,9 @@ use frame_support::{
 	traits::{Get},
 	Hashable,
 };
-use mc_support::traits::{LifeTime};
-
-pub mod nft;
-pub use crate::nft::UniqueAssets;
+use mc_support::traits::{
+	LifeTime, UniqueAssets
+};
 
 #[cfg(test)]
 mod mock;

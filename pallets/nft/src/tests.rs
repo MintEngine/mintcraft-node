@@ -1,10 +1,10 @@
 // Tests to be written here
 
 use crate::mock::*;
-use crate::nft::UniqueAssets;
 use crate::*;
-use frame_support::{assert_err, assert_ok, Hashable};
 use sp_core::H256;
+use frame_support::{assert_err, assert_ok, Hashable};
+use mc_support::traits::{UniqueAssets};
 
 #[test]
 fn mint() {

@@ -5,6 +5,7 @@ use sp_runtime::{
 	// }
 };
 use sp_std::prelude::*;
+
 use codec::{Encode, Decode};
 
 // Asset 的组合特性
@@ -181,4 +182,34 @@ impl Into<u8> for FeatureDestinyRank {
 }
 impl Default for FeatureDestinyRank {
 	fn default() -> Self { Self::Huang }
+}
+
+// Featured Part for asset
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
+pub struct AssetFeature {
+	/// The level of this asset
+	destiny: FeatureDestinyRank,
+	/// The elements info of this asset
+	elements: FeatureElements,
+	/// The 'saturation' of this asset
+	saturation: FeatureRankedLevel,
+	/// The 'lightness' of this asset
+	lightness: FeatureLevel
+}
+
+impl AssetFeature {
+	/// create new Feature
+	pub fn create (
+		destiny: FeatureDestinyRank,
+		elements: FeatureElements,
+		saturation: FeatureRankedLevel,
+		lightness: FeatureLevel
+	) -> Self {
+		AssetFeature {
+			destiny,
+			elements,
+			saturation,
+			lightness,
+		}
+	}
 }
