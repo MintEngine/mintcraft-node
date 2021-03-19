@@ -1,6 +1,26 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
+use sp_std::{fmt::Debug, prelude::*};
+use sp_runtime::{
+	RuntimeDebug, DispatchResult, DispatchError,
+	traits::{
+		AtLeast32BitUnsigned, StaticLookup,
+		// Zero,
+		// Saturating, CheckedSub, CheckedAdd,
+	},
+};
+use frame_support::{
+	ensure,
+	traits::{
+		Randomness, //, Currency, ReservableCurrency
+	},
+};
+use codec::{Encode, Decode, HasCompact};
 pub use pallet::*;
+
+use mc_support::traits::{
+	ManagerAccessor, RandomNumber
+};
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -10,7 +30,7 @@ pub mod pallet {
 		pallet_prelude::*
 	};
 	use frame_system::pallet_prelude::*;
-	// use super::*;
+	use super::*;
 
 	#[pallet::pallet]
 	#[pallet::generate_store(pub(super) trait Store)]
@@ -21,6 +41,15 @@ pub mod pallet {
 	pub trait Config: frame_system::Config {
 		/// The overarching event type.
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+
+		/// The arithmetic type of formula identifier.
+		type FormulaId: Member + Parameter + Default + Copy + HasCompact;
+
+		/// The manager origin.
+		type ManagerOrigin: EnsureOrigin<Self::Origin>;
+
+		/// Something that provides randomness in the runtime.
+		type RandomNumber: RandomNumber<u32>;
 	}
 
 	#[pallet::hooks]
@@ -28,24 +57,68 @@ pub mod pallet {
 
 	#[pallet::call]
 	impl<T:Config> Pallet<T> {
-		/// This function must be dispatched by a signed extrinsic.
+		/// create a formula
 		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
-		pub fn do_something(origin: OriginFor<T>) -> DispatchResultWithPostInfo {
+		pub fn create_formula(
+			origin: OriginFor<T>,
+			#[pallet::compact] id: T::FormulaId,
+		) -> DispatchResultWithPostInfo {
+			T::ManagerOrigin::ensure_origin(origin)?;
+
+			// TODO
+
+			Self::deposit_event(Event::FormulaCreated(id));
+			Ok(().into())
+		}
+
+		/// modify a formula
+		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
+		pub fn modify_formula(
+			origin: OriginFor<T>,
+			#[pallet::compact] id: T::FormulaId,
+		) -> DispatchResultWithPostInfo {
+			T::ManagerOrigin::ensure_origin(origin)?;
+
+			// TODO
+
+			Self::deposit_event(Event::FormulaModified(id));
+			Ok(().into())
+		}
+
+		/// execute a formula
+		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
+		pub fn excuete_formula(
+			origin: OriginFor<T>,
+			#[pallet::compact] id: T::FormulaId,
+		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
-			Self::deposit_event(Event::SomethingEmit(who));
+
+			// TODO
+
 			Ok(().into())
 		}
 	}
 
 	#[pallet::storage]
-	#[pallet::getter(fn something)]
-	pub type Something<T> = StorageValue<_, u32>;
+	#[pallet::getter(fn formulas)]
+	/// formula definations
+	pub(super) type Formulas<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::FormulaId,
+		Formula<T::FormulaId>,
+		ValueQuery,
+	>;
 
 	#[pallet::event]
 	#[pallet::metadata(T::AccountId = "AccountId")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-		SomethingEmit(T::AccountId),
+		/// Some formula were created. \[formula_id\]
+		FormulaCreated(T::FormulaId),
+		/// Some formula were modified. \[formula_id\]
+		FormulaModified(T::FormulaId),
+		FormulaExecuted(T::FormulaId, T::AccountId)
 	}
 
 	#[pallet::error]
@@ -53,6 +126,14 @@ pub mod pallet {
 		/// Error names should be descriptive.
 		NoneValue,
 	}
+}
+
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
+pub struct Formula<
+	FormulaId: Encode + Decode + Clone + Debug + Eq + PartialEq,
+> {
+	/// the id of dungeon
+	id: FormulaId,
 }
 
 // The main implementation block for the module.

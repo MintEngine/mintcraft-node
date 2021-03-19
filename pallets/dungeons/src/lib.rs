@@ -15,7 +15,7 @@ use frame_support::{
 		Get, Randomness, Currency, ReservableCurrency
 	},
 };
-use codec::{Encode, Decode,HasCompact};
+use codec::{Encode, Decode, HasCompact};
 use mc_support::traits::{
 	ManagerAccessor, RandomNumber
 };
@@ -57,12 +57,7 @@ pub mod pallet {
 		type ManagerOrigin: EnsureOrigin<Self::Origin>;
 
 		/// Something that provides randomness in the runtime.
-		type Randomness: Randomness<Self::Hash>;
-
-		/// Number of time we should try to generate a random number that has no modulo bias.
-		/// The larger this number, the more potential computation is used for picking the winner,
-		/// but also the more likely that the chosen winner is done fairly.
-		type MaxGenerateRandom: Get<u32>;
+		type RandomNumber: RandomNumber<u32>;
 	}
 
 	#[pallet::hooks]
@@ -221,7 +216,7 @@ pub struct DungeonInfo<
 
 }
 
-#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
 pub struct DungeonInstance<
 	DungeonId: Encode + Decode + Clone + Debug + Eq + PartialEq,
 > {

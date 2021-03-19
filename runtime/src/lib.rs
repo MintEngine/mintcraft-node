@@ -276,10 +276,6 @@ impl mc_actor::Config for Runtime {
 	type ActorLifeTime = DemoActor;
 }
 
-impl mc_cultivate::Config for Runtime {
-	type Event = Event;
-}
-
 impl mc_implication::Config for Runtime {
 	type Event = Event;
 }
@@ -294,9 +290,17 @@ impl mc_nature::Config for Runtime {
 	type ModuleId = NatureModuleId;
 	type Balance = Balance;
 	type Currency = Balances;
-	type Randomness = RandomnessCollectiveFlip;
 	type ManagerOrigin = frame_system::EnsureRoot<AccountId>;
+	type Randomness = RandomnessCollectiveFlip;
 	type MaxGenerateRandom = MaxGenerateRandom;
+}
+
+
+impl mc_cultivate::Config for Runtime {
+	type Event = Event;
+	type FormulaId = u32;
+	type ManagerOrigin = frame_system::EnsureRoot<AccountId>;
+	type RandomNumber = Nature;
 }
 
 impl mc_dungeons::Config for Runtime {
@@ -304,9 +308,8 @@ impl mc_dungeons::Config for Runtime {
 	type DungeonId = u32;
 	type Balance = Balance;
 	type Currency = Balances;
-	type Randomness = RandomnessCollectiveFlip;
 	type ManagerOrigin = frame_system::EnsureRoot<AccountId>;
-	type MaxGenerateRandom = MaxGenerateRandom;
+	type RandomNumber = Nature;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
