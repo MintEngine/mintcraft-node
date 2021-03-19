@@ -981,6 +981,11 @@ impl<T: Config> FeaturedAssets<T::AccountId> for Pallet<T> {
 	type Amount = T::Balance;
 	type Balance = T::Balance;
 
+	/// The usage of this type of asset
+	fn is_in_using(id: Self::AssetId) -> bool {
+		Asset::<T>::contains_key(id)
+	}
+
 	/// Get the total supply of an asset `id`
 	fn total_supply(id: Self::AssetId) -> Self::Amount {
 		Asset::<T>::get(id).map(|x| x.supply).unwrap_or_else(Zero::zero)

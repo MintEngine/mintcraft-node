@@ -11,6 +11,8 @@ use frame_support::{
 	dispatch::{result::Result, DispatchError, DispatchResult, DispatchResultWithPostInfo},
 	traits::Get,
 };
+use frame_support::pallet_prelude::*;
+
 use sp_std::vec::Vec;
 use super::primitives::{ AssetFeature };
 
@@ -49,31 +51,15 @@ impl LifeTime<u64> for () {
 	fn base_age(_: u32) -> u64 { 0 }
 }
 
-// Implication related traits
-// pub trait ImplicationSystem {
-
-// }
-
-// pub trait ImplicationEntity {
-
-// }
-
-// // Decay related traits
-// pub trait DecayingSystem {
-
-// }
-
-// pub trait DecayingEntity {
-
-// }
-
 /// An interface over a set of featured assets.
 pub trait FeaturedAssets<AccountId> {
 	/// The type used to identify featured assets.
-	type AssetId;
-	type Amount;
-	type Balance;
+	type AssetId: Parameter + Default + Copy;
+	type Amount: Parameter + Default + Copy;
+	type Balance: Parameter + Default + Copy;
 
+	/// The usage of this type of asset
+	fn is_in_using(id: Self::AssetId) -> bool;
 	/// The total number of this type of asset that exists (minted - burned).
 	fn total_supply(id: Self::AssetId) -> Self::Amount;
 	/// The balance of this type of asset owned by an account.

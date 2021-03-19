@@ -1,5 +1,5 @@
 use sp_runtime::{
-	RuntimeDebug,
+	Percent, RuntimeDebug,
 	// traits::{
 	// 	AtLeast32BitUnsigned, Zero, StaticLookup, Saturating, CheckedSub, CheckedAdd,
 	// }
@@ -184,6 +184,17 @@ impl Default for FeatureDestinyRank {
 	fn default() -> Self { Self::Huang }
 }
 
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug)]
+pub enum DungeonReportState {
+	Lose,
+	PerfectWin,
+	ScoredWin(Percent),
+}
+
+impl Default for DungeonReportState {
+	fn default() -> Self { Self::Lose }
+}
+
 // Featured Part for asset
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
 pub struct AssetFeature {
@@ -213,3 +224,4 @@ impl AssetFeature {
 		}
 	}
 }
+

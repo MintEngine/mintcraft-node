@@ -2,35 +2,41 @@
 
 use sp_std::{fmt::Debug, prelude::*};
 use sp_runtime::{
-	RuntimeDebug, DispatchResult, DispatchError,
+	RuntimeDebug, Percent,
 	traits::{
-		AtLeast32BitUnsigned, StaticLookup,
-		// Zero,
+		AtLeast32BitUnsigned,
 		// Saturating, CheckedSub, CheckedAdd,
 	},
 };
 use frame_support::{
-	ensure,
 	traits::{
-		Get, Randomness, Currency, ReservableCurrency
+		Currency, ReservableCurrency
 	},
 };
 use codec::{Encode, Decode, HasCompact};
-use mc_support::traits::{
-	ManagerAccessor, RandomNumber
+use mc_support::{
+	primitives::{ DungeonReportState },
+	traits::{
+		FeaturedAssets, RandomNumber
+	},
 };
 
 pub use pallet::*;
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
+type AssetAmountPair<T> = (
+	<<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::AssetId,
+	<<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::Amount,
+);
+
 #[frame_support::pallet]
 pub mod pallet {
 	use frame_system::pallet_prelude::*;
 	use frame_support::{
+		pallet_prelude::*,
 		weights::{DispatchClass, Pays},
 		dispatch::DispatchResultWithPostInfo,
-		pallet_prelude::*
 	};
 	use super::*;
 
@@ -58,6 +64,9 @@ pub mod pallet {
 
 		/// Something that provides randomness in the runtime.
 		type RandomNumber: RandomNumber<u32>;
+
+		/// The featured asset module
+		type FeaturedAssets: FeaturedAssets<Self::AccountId>;
 	}
 
 	#[pallet::hooks]
@@ -66,17 +75,27 @@ pub mod pallet {
 	}
 
 	#[pallet::call]
-	impl<T:Config> Pallet<T> {
+	impl<T: Config> Pallet<T> {
 		/// create new dungeon
 		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
 		pub(super) fn create(
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::DungeonId,
 			ticket_price: BalanceOf<T>,
+			provide_assets: Vec<AssetAmountPair<T>>,
 		) -> DispatchResultWithPostInfo {
 			T::ManagerOrigin::ensure_origin(origin)?;
 
-			// TODO create dungeon
+			ensure!(!Dungeons::<T>::contains_key(id), Error::<T>::DungeonExists);
+			let all_asset_in_using = provide_assets.iter().all(|one| T::FeaturedAssets::is_in_using(one.0));
+			ensure!(!all_asset_in_using, Error::<T>::AssetNotUsed);
+
+			// create dungeon
+			Dungeons::<T>::insert(id, DungeonInfo {
+				ticket_price: ticket_price,
+				provide_assets: provide_assets,
+				report_ranks: Vec::new(),
+			});
 
 			Self::deposit_event(Event::DungeonCreated(id, ticket_price));
 			Ok(().into())
@@ -91,11 +110,15 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			T::ManagerOrigin::ensure_origin(origin)?;
 
-			// TODO
-			let old_ticket_price = ticket_price;
+			Dungeons::<T>::try_mutate(id, |maybe_dungeon| {
+				let dungeon = maybe_dungeon.as_mut().ok_or(Error::<T>::Unknown)?;
 
-			Self::deposit_event(Event::DungeonTicketModified(id, old_ticket_price, ticket_price));
-			Ok(().into())
+				let old_ticket_price = dungeon.ticket_price;
+				dungeon.ticket_price = ticket_price;
+
+				Self::deposit_event(Event::DungeonTicketModified(id, old_ticket_price, ticket_price));
+				Ok(().into())
+			})
 		}
 
 		/// modify assets supply
@@ -103,13 +126,18 @@ pub mod pallet {
 		pub(super) fn modify_assets_supply(
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::DungeonId,
-			// TODO
+			provide_assets: Vec<AssetAmountPair<T>>,
 		) -> DispatchResultWithPostInfo {
 			T::ManagerOrigin::ensure_origin(origin)?;
 
-			// TODO
+			Dungeons::<T>::try_mutate(id, |maybe_dungeon| {
+				let dungeon = maybe_dungeon.as_mut().ok_or(Error::<T>::Unknown)?;
 
-			Ok(().into())
+				dungeon.provide_assets = provide_assets;
+
+				Self::deposit_event(Event::DungeonInfoModified(id));
+				Ok(().into())
+			})
 		}
 
 		/// modify final distribution
@@ -117,13 +145,18 @@ pub mod pallet {
 		pub(super) fn modify_distribution_ratio(
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::DungeonId,
-			// TODO
+			report_ranks: Vec<(DungeonReportState, Percent)>,
 		) -> DispatchResultWithPostInfo {
 			T::ManagerOrigin::ensure_origin(origin)?;
 
-			// TODO
+			Dungeons::<T>::try_mutate(id, |maybe_dungeon| {
+				let dungeon = maybe_dungeon.as_mut().ok_or(Error::<T>::Unknown)?;
 
-			Ok(().into())
+				dungeon.report_ranks = report_ranks;
+
+				Self::deposit_event(Event::DungeonReportRanksModified(id));
+				Ok(().into())
+			})
 		}
 
 		/// buy dungeon ticket
@@ -157,6 +190,7 @@ pub mod pallet {
 		pub(super) fn end(
 			origin: OriginFor<T>,
 			ticket_id: T::Hash,
+			result: DungeonReportState,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
@@ -173,8 +207,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		T::DungeonId,
-		DungeonInfo<BalanceOf<T>>,
-		ValueQuery,
+		DungeonInfo<BalanceOf<T>, AssetAmountPair<T>>
 	>;
 
 	#[pallet::storage]
@@ -196,24 +229,29 @@ pub mod pallet {
 		DungeonCreated(T::DungeonId, BalanceOf<T>),
 		/// Some dungeon's price were modified. \[dungeon_id, old_ticket_price, new_ticket_price\]
 		DungeonTicketModified(T::DungeonId, BalanceOf<T>, BalanceOf<T>),
-		// Some dungeon's price were modified. \[dungeon_id, old_ticket_price, new_ticket_price\]
-		// DungeonInfoModified(T::DungeonId, BalanceOf<T>, BalanceOf<T>),
+		// Some dungeon's info were modified. \[dungeon_id\]
+		DungeonInfoModified(T::DungeonId),
+		// Some dungeon's report ranks were modified. \[dungeon_id\]
+		DungeonReportRanksModified(T::DungeonId),
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Error names should be descriptive.
-		NoneValue,
+		DungeonExists,
+		AssetNotUsed,
+		Unknown,
 	}
 }
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
 pub struct DungeonInfo<
 	Balance: Encode + Decode + Clone + Debug + Eq + PartialEq,
+	AssetAmountPair,
 > {
-	/// The balance.
+	/// The balance
 	ticket_price: Balance,
-
+	provide_assets: Vec<AssetAmountPair>,
+	report_ranks: Vec<(DungeonReportState, Percent)>,
 }
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]

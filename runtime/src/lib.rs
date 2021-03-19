@@ -310,6 +310,7 @@ impl mc_dungeons::Config for Runtime {
 	type Currency = Balances;
 	type ManagerOrigin = frame_system::EnsureRoot<AccountId>;
 	type RandomNumber = Nature;
+	type FeaturedAssets = FeaturedAssets;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
