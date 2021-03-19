@@ -33,28 +33,6 @@ subcommands:
 ./target/release/mintcraft -h
 ```
 
-### Types
-
-Setup in 'Developers' when using [https://polkadot.js.org](https://polkadot.js.org)
-
-```json
-{
-  "CommodityId": "Hash",
-  "CommodityInfo": {
-    "name": "Vec<u8>",
-    "version": "Vec<u8>"
-  },
-  "MetaKeyValue": {
-   "key": "Vec<u8>",
-   "value": "bool"
-  },
-  "Commodity": {
-   "id": "CommodityId",
-   "info": "CommodityInfo"
-  }
-}
-```
-
 ## Run
 
 The provided `cargo run` command will launch a temporary node and its state will be discarded after

@@ -36,19 +36,17 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::FullCodec;
-use codec::{Decode, Encode};
-use frame_support::{
-    decl_error, decl_event, decl_module, decl_storage, dispatch, ensure,
-    traits::{EnsureOrigin, Get},
-    Hashable,
-};
-use frame_system::ensure_signed;
-use sp_runtime::{
-    traits::{Hash, Member},
-    RuntimeDebug,
-};
+use codec::{Decode, Encode,FullCodec};
 use sp_std::{cmp::Eq, fmt::Debug, vec::Vec};
+use sp_runtime::{
+    traits::{Hash},
+    RuntimeDebug, DispatchResult, DispatchError,
+};
+use frame_support::{
+	ensure,
+	traits::{Get},
+	Hashable,
+};
 use mc_support::traits::{LifeTime};
 
 pub mod nft;
@@ -60,120 +58,47 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Config: frame_system::Config {
-    type Event: From<Event<Self>> + Into<<Self as frame_system::Config>::Event>;
+pub use pallet::*;
 
-    /// The dispatch origin that is able to mint new instances of this type of commodity.
-    type CommodityAdmin: EnsureOrigin<Self::Origin>;
-    /// The data type that is used to describe this type of commodity.
-    type CommodityInfo: Hashable + Member + Debug + Default + FullCodec + Ord;
-    /// The maximum number of this type of commodity that may exist (minted - burned).
-    type CommodityLimit: Get<u128>;
-    /// The maximum number of this type of commodity that any single account may own.
-    type UserCommodityLimit: Get<u64>;
-    /// The decay time in block number delta
-    type LifeTime: LifeTime<Self::BlockNumber>;
-}
+#[frame_support::pallet]
+pub mod pallet {
+	use frame_support::{
+		weights::{DispatchClass, Pays},
+		dispatch::DispatchResultWithPostInfo,
+		pallet_prelude::*
+	};
+	use frame_system::ensure_signed;
+	use frame_system::pallet_prelude::*;
+	use super::*;
 
-#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
-pub struct CommodityInfo {
-    name: Vec<u8>,
-    version: Vec<u8>,
-}
+	#[pallet::pallet]
+	#[pallet::generate_store(pub(super) trait Store)]
+	pub struct Pallet<T>(_);
 
-#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
-pub struct MetaKeyValue {
-    key: Vec<u8>,
-    value: bool,
-}
+	/// The module configuration trait.
+	#[pallet::config]
+	pub trait Config: frame_system::Config {
+		/// The overarching event type.
+		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
+		/// The dispatch origin that is able to mint new instances of this type of commodity.
+		type CommodityAdmin: EnsureOrigin<Self::Origin>;
+		/// The data type that is used to describe this type of commodity.
+		type CommodityInfo: Hashable + Member + Debug + Default + FullCodec + Ord;
+		/// The maximum number of this type of commodity that may exist (minted - burned).
+		type CommodityLimit: Get<u128>;
+		/// The maximum number of this type of commodity that any single account may own.
+		type UserCommodityLimit: Get<u64>;
+		/// The decay time in block number delta
+		type LifeTime: LifeTime<Self::BlockNumber>;
+	}
 
-#[derive(Copy, Clone, Eq, PartialEq, Encode, Decode, Default, RuntimeDebug)]
-pub struct ExistInfo<BlockNumber> {
-    generated_at: BlockNumber,
-    decayed_at: BlockNumber,
-}
+	#[pallet::hooks]
+	impl<T: Config> Hooks<BlockNumberFor<T>> for Pallet<T> {
+		// TODO handle dying actors
+	}
 
-/// The runtime system's hashing algorithm is used to uniquely identify commodities.
-pub type CommodityId<T> = <T as frame_system::Config>::Hash;
-
-/// Associates a commodity with its ID.
-pub type Commodity<T> = (CommodityId<T>, <T as Config>::CommodityInfo);
-
-/// exist info of nft
-pub type ExistInfoOf<T> = ExistInfo<<T as frame_system::Config>::BlockNumber>;
-
-decl_storage! {
-    trait Store for Module<T: Config> as Commodity {
-        /// The total number of this type of commodity that exists (minted - burned).
-        Total get(fn total): u128 = 0;
-        /// The total number of this type of commodity that has been burned (may overflow).
-        Burned get(fn burned): u128 = 0;
-        /// The total number of this type of commodity owned by an account.
-        TotalForAccount get(fn total_for_account): map hasher(blake2_128_concat) T::AccountId => u64 = 0;
-        /// A mapping from an account to a list of all of the commodities of this type that are owned by it.
-        CommoditiesForAccount get(fn commodities_for_account): map hasher(blake2_128_concat) T::AccountId => Vec<Commodity<T>>;
-        /// A mapping from a commodity ID to the account that owns it.
-        AccountForCommodity get(fn account_for_commodity): map hasher(identity) CommodityId<T> => T::AccountId;
-        /// meta data for current NFT
-        NftMeta get(fn meta_data): map hasher(identity) CommodityId<T> => Vec<MetaKeyValue>;
-        /// time of generated and decay
-        NftExistInfo get(fn exist_info): map hasher(identity) CommodityId<T> => ExistInfoOf<T>;
-    }
-
-    add_extra_genesis {
-        config(balances): Vec<(T::AccountId, Vec<T::CommodityInfo>)>;
-        build(|config: &GenesisConfig<T>| {
-            for (who, assets) in config.balances.iter() {
-                for asset in assets {
-                    match <Module::<T> as UniqueAssets::<T::AccountId>>::mint(who, asset.clone()) {
-                        Ok(_) => {}
-                        Err(err) => { panic!(err) },
-                    }
-                }
-            }
-        });
-    }
-}
-
-decl_event!(
-    pub enum Event<T>
-    where
-        CommodityId = <T as frame_system::Config>::Hash,
-        AccountId = <T as frame_system::Config>::AccountId,
-    {
-        /// The commodity has been burned.
-        Burned(CommodityId),
-        /// The commodity has been minted and distributed to the account.
-        Minted(CommodityId, AccountId),
-        /// Ownership of the commodity has been transferred to the account.
-        Transferred(CommodityId, AccountId),
-        /// change metadata event
-        MetadataEvent(CommodityId, AccountId),
-    }
-);
-
-decl_error! {
-    pub enum Error for Module<T: Config> {
-        // Thrown when there is an attempt to mint a duplicate commodity.
-        CommodityExists,
-        // Thrown when there is an attempt to burn or transfer a nonexistent commodity.
-        NonexistentCommodity,
-        // Thrown when someone who is not the owner of a commodity attempts to transfer or burn it.
-        NotCommodityOwner,
-        // Thrown when the commodity admin attempts to mint a commodity and the maximum number of this
-        // type of commodity already exists.
-        TooManyCommodities,
-        // Thrown when an attempt is made to mint or transfer a commodity to an account that already
-        // owns the maximum number of this type of commodity.
-        TooManyCommoditiesForAccount,
-    }
-}
-
-decl_module! {
-    pub struct Module<T: Config> for enum Call where origin: T::Origin {
-        type Error = Error<T>;
-        fn deposit_event() = default;
-
+	#[pallet::call]
+	impl<T: Config> Pallet<T> {
         /// Create a new commodity from the provided commodity info and identify the specified
         /// account as its owner. The ID of the new commodity will be equal to the hash of the info
         /// that defines it, as calculated by the runtime system's hashing algorithm.
@@ -187,18 +112,23 @@ decl_module! {
         ///
         /// - `owner_account`: Receiver of the commodity.
         /// - `commodity_info`: The information that defines the commodity.
-        #[weight = 10_000]
-        pub fn mint(origin, owner_account: T::AccountId, commodity_info: T::CommodityInfo) -> dispatch::DispatchResult {
+        #[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
+        pub fn mint(
+			origin: OriginFor<T>,
+			owner_account: T::AccountId,
+			commodity_info: T::CommodityInfo
+		) -> DispatchResultWithPostInfo {
             T::CommodityAdmin::ensure_origin(origin)?;
             // ensure_signed(origin)?;
             let commodity_id = <Self as UniqueAssets<_>>::mint(&owner_account, commodity_info)?;
+			let current_block = frame_system::Module::<T>::block_number();
             // add exist info
             NftExistInfo::<T>::insert(commodity_id, ExistInfo {
-                generated_at: <frame_system::Module<T>>::block_number(),
-                decayed_at: <frame_system::Module<T>>::block_number() + T::LifeTime::base_age(0),
+                generated_at: current_block,
+                decayed_at: current_block + T::LifeTime::base_age(0),
             });
-            Self::deposit_event(RawEvent::Minted(commodity_id, owner_account.clone()));
-            Ok(())
+            Self::deposit_event(Event::Minted(commodity_id, owner_account.clone()));
+            Ok(().into())
         }
 
         /// Destroy the specified commodity.
@@ -207,14 +137,17 @@ decl_module! {
         ///
         /// - `commodity_id`: The hash (calculated by the runtime system's hashing algorithm)
         ///   of the info that defines the commodity to destroy.
-        #[weight = 10_000]
-        pub fn burn(origin, commodity_id: CommodityId<T>) -> dispatch::DispatchResult {
+        #[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
+        pub fn burn(
+			origin: OriginFor<T>,
+			commodity_id: T::Hash,
+		) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            ensure!(who == Self::account_for_commodity(&commodity_id), Error::<T>::NotCommodityOwner);
+            ensure!(who == AccountForCommodity::<T>::get(&commodity_id), Error::<T>::NotCommodityOwner);
 
             <Self as UniqueAssets<_>>::burn(&commodity_id)?;
-            Self::deposit_event(RawEvent::Burned(commodity_id.clone()));
-            Ok(())
+            Self::deposit_event(Event::Burned(commodity_id.clone()));
+            Ok(().into())
         }
 
         /// Transfer a commodity to a new owner.
@@ -227,20 +160,30 @@ decl_module! {
         /// - `dest_account`: Receiver of the commodity.
         /// - `commodity_id`: The hash (calculated by the runtime system's hashing algorithm)
         ///   of the info that defines the commodity to destroy.
-        #[weight = 10_000]
-        pub fn transfer(origin, dest_account: T::AccountId, commodity_id: CommodityId<T>) -> dispatch::DispatchResult {
+        #[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
+        pub fn transfer(
+			origin: OriginFor<T>,
+			dest_account: T::AccountId,
+			commodity_id: T::Hash
+		) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            ensure!(who == Self::account_for_commodity(&commodity_id), Error::<T>::NotCommodityOwner);
+            ensure!(who == AccountForCommodity::<T>::get(&commodity_id), Error::<T>::NotCommodityOwner);
 
             <Self as UniqueAssets<_>>::transfer(&dest_account, &commodity_id)?;
-            Self::deposit_event(RawEvent::Transferred(commodity_id.clone(), dest_account.clone()));
-            Ok(())
+
+            Self::deposit_event(Event::Transferred(commodity_id.clone(), dest_account.clone()));
+            Ok(().into())
         }
         /// add meta for a specific nft
-        #[weight = 10_000]
-        pub fn add_meta(origin, commodity_id: CommodityId<T>, key: Vec<u8>, value: bool) -> dispatch::DispatchResult {
+        #[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
+        pub fn add_meta(
+			origin: OriginFor<T>,
+			commodity_id: T::Hash,
+			key: Vec<u8>,
+			value: bool
+		) -> DispatchResultWithPostInfo {
             let who = ensure_signed(origin)?;
-            ensure!(who.clone() == Self::account_for_commodity(&commodity_id), Error::<T>::NotCommodityOwner);
+            ensure!(who.clone() == AccountForCommodity::<T>::get(&commodity_id), Error::<T>::NotCommodityOwner);
             let mut new_meta = Some(MetaKeyValue { key: key.clone(), value: value.clone() });
 
             let mut metas = Self::meta_data(commodity_id).into_iter()
@@ -255,15 +198,130 @@ decl_module! {
             } else {
                 NftMeta::<T>::insert(commodity_id, metas);
             }
-            Self::deposit_event(RawEvent::MetadataEvent(commodity_id, who));
-            Ok(())
+            Self::deposit_event(Event::MetadataEvent(commodity_id, who));
+            Ok(().into())
         }
+	}
 
-    }
+	#[pallet::storage]
+	#[pallet::getter(fn total)]
+	/// The total number of this type of commodity that exists (minted - burned).
+	pub type Total<T> = StorageValue<_, u128, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn burned)]
+	/// The total number of this type of commodity that has been burned (may overflow).
+	pub type Burned<T> = StorageValue<_, u128, ValueQuery>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn total_for_account)]
+	/// The total number of this type of commodity owned by an account.
+	pub type TotalForAccount<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		u64,
+		ValueQuery
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn commodities_for_account)]
+	/// A mapping from an account to a list of all of the commodities of this type that are owned by it.
+	pub type CommoditiesForAccount<T: Config> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		Vec<Commodity<T>>,
+		ValueQuery
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn account_for_commodity)]
+	/// A mapping from a commodity ID to the account that owns it.
+	pub type AccountForCommodity<T: Config> = StorageMap<
+		_,
+		Identity,
+		T::Hash,
+		T::AccountId,
+		ValueQuery
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn meta_data)]
+	/// meta data for current NFT
+	pub type NftMeta<T: Config> = StorageMap<
+		_,
+		Identity,
+		T::Hash,
+		Vec<MetaKeyValue>,
+		ValueQuery
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn exist_info)]
+	/// time of generated and decay
+	pub type NftExistInfo<T: Config> = StorageMap<
+		_,
+		Identity,
+		T::Hash,
+		ExistInfo<T::BlockNumber>,
+		ValueQuery
+	>;
+
+	#[pallet::event]
+	#[pallet::metadata(T::AccountId = "AccountId", T::Hash = "Hash")]
+	#[pallet::generate_deposit(pub(super) fn deposit_event)]
+	pub enum Event<T: Config> {
+        /// The commodity has been burned.
+        Burned(T::Hash),
+        /// The commodity has been minted and distributed to the account.
+        Minted(T::Hash, T::AccountId),
+        /// Ownership of the commodity has been transferred to the account.
+        Transferred(T::Hash, T::AccountId),
+        /// change metadata event
+        MetadataEvent(T::Hash, T::AccountId),
+	}
+
+	#[pallet::error]
+	pub enum Error<T> {
+        // Thrown when there is an attempt to mint a duplicate commodity.
+        CommodityExists,
+        // Thrown when there is an attempt to burn or transfer a nonexistent commodity.
+        NonexistentCommodity,
+        // Thrown when someone who is not the owner of a commodity attempts to transfer or burn it.
+        NotCommodityOwner,
+        // Thrown when the commodity admin attempts to mint a commodity and the maximum number of this
+        // type of commodity already exists.
+        TooManyCommodities,
+        // Thrown when an attempt is made to mint or transfer a commodity to an account that already
+        // owns the maximum number of this type of commodity.
+        TooManyCommoditiesForAccount,
+	}
 }
 
-impl<T: Config> UniqueAssets<T::AccountId> for Module<T> {
-    type AssetId = CommodityId<T>;
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
+pub struct CommodityInfo {
+    name: Vec<u8>,
+    version: Vec<u8>,
+}
+
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
+pub struct MetaKeyValue {
+    key: Vec<u8>,
+    value: bool,
+}
+
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
+pub struct ExistInfo<BlockNumber> {
+    generated_at: BlockNumber,
+    decayed_at: BlockNumber,
+}
+
+/// Associates a commodity with its ID.
+pub type Commodity<T> = (<T as frame_system::Config>::Hash, <T as Config>::CommodityInfo);
+
+impl<T: Config> UniqueAssets<T::AccountId> for Pallet<T> {
+    type AssetId = T::Hash;
     type AssetInfo = T::CommodityInfo;
     type AssetLimit = T::CommodityLimit;
     type UserAssetLimit = T::UserCommodityLimit;
@@ -284,14 +342,14 @@ impl<T: Config> UniqueAssets<T::AccountId> for Module<T> {
         Self::commodities_for_account(account)
     }
 
-    fn owner_of(commodity_id: &CommodityId<T>) -> T::AccountId {
+    fn owner_of(commodity_id: &T::Hash) -> T::AccountId {
         Self::account_for_commodity(commodity_id)
     }
 
     fn mint(
         owner_account: &T::AccountId,
         commodity_info: <T>::CommodityInfo,
-    ) -> dispatch::result::Result<CommodityId<T>, dispatch::DispatchError> {
+    ) -> Result<T::Hash, DispatchError> {
         let commodity_id = T::Hashing::hash_of(&commodity_info);
 
         ensure!(
@@ -300,18 +358,18 @@ impl<T: Config> UniqueAssets<T::AccountId> for Module<T> {
         );
 
         ensure!(
-            Self::total_for_account(owner_account) < T::UserCommodityLimit::get(),
+            Self::total_for_account(owner_account) < Self::UserAssetLimit::get(),
             Error::<T>::TooManyCommoditiesForAccount
         );
 
         ensure!(
-            Self::total() < T::CommodityLimit::get(),
+            Self::total() < Self::AssetLimit::get(),
             Error::<T>::TooManyCommodities
         );
 
         let new_commodity = (commodity_id, commodity_info);
 
-        Total::<>::mutate(|total| *total += 1);
+        Total::<T>::mutate(|total| *total += 1);
         TotalForAccount::<T>::mutate(owner_account, |total| *total += 1);
         CommoditiesForAccount::<T>::mutate(owner_account, |commodities| {
             match commodities.binary_search(&new_commodity) {
@@ -324,7 +382,7 @@ impl<T: Config> UniqueAssets<T::AccountId> for Module<T> {
         Ok(commodity_id)
     }
 
-    fn burn(commodity_id: &CommodityId<T>) -> dispatch::DispatchResult {
+    fn burn(commodity_id: &T::Hash) -> DispatchResult {
         let owner = Self::owner_of(commodity_id);
         ensure!(
             owner != T::AccountId::default(),
@@ -333,8 +391,8 @@ impl<T: Config> UniqueAssets<T::AccountId> for Module<T> {
 
         let burn_commodity = (*commodity_id, <T>::CommodityInfo::default());
 
-        Total::<>::mutate(|total| *total -= 1);
-        Burned::<>::mutate(|total| *total += 1);
+        Total::<T>::mutate(|total| *total -= 1);
+        Burned::<T>::mutate(|total| *total += 1);
         TotalForAccount::<T>::mutate(&owner, |total| *total -= 1);
         CommoditiesForAccount::<T>::mutate(owner, |commodities| {
             let pos = commodities
@@ -352,8 +410,8 @@ impl<T: Config> UniqueAssets<T::AccountId> for Module<T> {
 
     fn transfer(
         dest_account: &T::AccountId,
-        commodity_id: &CommodityId<T>,
-    ) -> dispatch::DispatchResult {
+        commodity_id: &T::Hash,
+    ) -> DispatchResult {
         let owner = Self::owner_of(&commodity_id);
         ensure!(
             owner != T::AccountId::default(),
@@ -361,7 +419,7 @@ impl<T: Config> UniqueAssets<T::AccountId> for Module<T> {
         );
 
         ensure!(
-            Self::total_for_account(dest_account) < T::UserCommodityLimit::get(),
+            Self::total_for_account(dest_account) < Self::UserAssetLimit::get(),
             Error::<T>::TooManyCommoditiesForAccount
         );
 
