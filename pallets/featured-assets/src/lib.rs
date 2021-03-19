@@ -112,6 +112,7 @@
 mod tests;
 
 pub mod weights;
+pub mod traits;
 
 use sp_std::{fmt::Debug, prelude::*};
 use sp_runtime::{
@@ -132,6 +133,7 @@ use mc_support::{
 };
 
 pub use weights::WeightInfo;
+pub use traits::*;
 pub use pallet::*;
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
@@ -1051,19 +1053,6 @@ pub struct AssetMetadata<DepositBalance> {
 	decimals: u8,
 }
 
-// Featured Part for asset
-#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
-pub struct AssetFeature {
-	/// The level of this asset
-	destiny: FeatureDestinyRank,
-	/// The 'hue' identity of this asset
-	elements: FeatureElements,
-	/// The 'saturation' of this asset
-	saturation: FeatureRankedLevel,
-	/// The 'lightness' of this asset
-	lightness: FeatureLevel
-}
-
 // The main implementation block for the module.
 impl<T: Config> Pallet<T> {
 	// Public immutables
@@ -1083,21 +1072,20 @@ impl<T: Config> Pallet<T> {
 		Asset::<T>::get(id).map(|x| x.max_zombies - x.zombies).unwrap_or_else(Zero::zero)
 	}
 
-	/// Get the feature info of the asset
-	pub fn feature(id: T::AssetId) -> Option<AssetFeature> {
-		Feature::<T>::get(id)
-	}
+	// /// Get the feature info of the asset
+	// pub fn feature(id: T::AssetId) -> Option<AssetFeatureInfo> {
+	// 	Feature::<T>::get(id).into()
+	// }
 
 	/// create feature detail by code
 	/// usage: 0x0(Destiny) 0(lightness) 00(saturation) 00 00(Color)
 	fn new_feature_detail(feature_code: u32) -> AssetFeature {
-		AssetFeature {
-			destiny: FeatureDestinyRank::from((feature_code >> 28) as u8),
-			elements: FeatureElements::from((feature_code & 0xFFFF) as u16),
-			lightness: FeatureLevel::from(((feature_code >> 24) & 0x0F) as u8),
-			saturation: FeatureRankedLevel::from(((feature_code >> 16) & 0xFF) as u8),
-
-		}
+		AssetFeature::create(
+			FeatureDestinyRank::from((feature_code >> 28) as u8),
+			FeatureElements::from((feature_code & 0xFFFF) as u16),
+			FeatureRankedLevel::from(((feature_code >> 16) & 0xFF) as u8),
+			FeatureLevel::from(((feature_code >> 24) & 0x0F) as u8),
+		)
 	}
 
 	fn new_account(
