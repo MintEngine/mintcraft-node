@@ -302,7 +302,7 @@ pub mod pallet {
 				is_frozen: false,
 				is_featured: true,
 			});
-			let rand_value = T::RandomNumber::generate_random(0);
+			let rand_value = T::RandomNumber::generate_by_seed(0);
 			// add feature info
 			Feature::<T>::insert(id, Self::new_feature_detail(rand_value));
 

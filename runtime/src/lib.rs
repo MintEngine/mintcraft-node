@@ -309,7 +309,9 @@ impl mc_dungeons::Config for Runtime {
 	type Balance = Balance;
 	type Currency = Balances;
 	type ManagerOrigin = frame_system::EnsureRoot<AccountId>;
+	type AssetAdmin = Nature;
 	type RandomNumber = Nature;
+	type RandomHash = Nature;
 	type FeaturedAssets = FeaturedAssets;
 }
 

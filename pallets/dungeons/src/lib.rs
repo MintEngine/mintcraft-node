@@ -17,7 +17,7 @@ use codec::{Encode, Decode, HasCompact};
 use mc_support::{
 	primitives::{ DungeonReportState },
 	traits::{
-		FeaturedAssets, RandomNumber
+		ManagerAccessor, FeaturedAssets, RandomNumber, RandomHash,
 	},
 };
 
@@ -62,8 +62,14 @@ pub mod pallet {
 		/// The manager origin.
 		type ManagerOrigin: EnsureOrigin<Self::Origin>;
 
-		/// Something that provides randomness in the runtime.
+		/// Asset Admin is outer module
+		type AssetAdmin: ManagerAccessor<Self::AccountId>;
+
+		/// Something that provides randomness number in the runtime.
 		type RandomNumber: RandomNumber<u32>;
+
+		/// Something that provides randomness hash in the runtime.
+		type RandomHash: RandomHash<Self::Hash>;
 
 		/// The featured asset module
 		type FeaturedAssets: FeaturedAssets<Self::AccountId>;
@@ -217,8 +223,7 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		T::Hash,
-		DungeonInstance<T::DungeonId>,
-		ValueQuery,
+		DungeonInstance<T::DungeonId, T::AccountId, T::BlockNumber>
 	>;
 
 	#[pallet::event]
@@ -229,10 +234,16 @@ pub mod pallet {
 		DungeonCreated(T::DungeonId, BalanceOf<T>),
 		/// Some dungeon's price were modified. \[dungeon_id, old_ticket_price, new_ticket_price\]
 		DungeonTicketModified(T::DungeonId, BalanceOf<T>, BalanceOf<T>),
-		// Some dungeon's info were modified. \[dungeon_id\]
+		/// Some dungeon's info were modified. \[dungeon_id\]
 		DungeonInfoModified(T::DungeonId),
-		// Some dungeon's report ranks were modified. \[dungeon_id\]
+		/// Some dungeon's report ranks were modified. \[dungeon_id\]
 		DungeonReportRanksModified(T::DungeonId),
+		/// a dungeon instance ticket bought. \[dungeon_id, player_id, server_id, ticket_id\]
+		DungeonTicketBought(T::DungeonId, T::AccountId, T::AccountId, T::Hash),
+		/// a dungeon started. \[dungeon_id, player_id, server_id, ticket_id\]
+		DungeonStarted(T::DungeonId, T::AccountId, T::AccountId, T::Hash),
+		/// a dungeon ended. \[dungeon_id, player_id, server_id, ticket_id\]
+		DungeonEnded(T::DungeonId, T::AccountId, T::AccountId, T::Hash, DungeonReportState),
 	}
 
 	#[pallet::error]
@@ -254,12 +265,36 @@ pub struct DungeonInfo<
 	report_ranks: Vec<(DungeonReportState, Percent)>,
 }
 
-#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
+/// The status of a dungeon instance
+#[derive(Encode, Decode, Clone, PartialEq, Eq, RuntimeDebug)]
+pub enum DungeonInstanceStatus<AccountId, BlockNumber> {
+	Booked {
+		close_due: BlockNumber,
+	},
+	Started {
+		server: AccountId,
+		close_due: BlockNumber,
+	},
+	Ended {
+		server: AccountId,
+		report_at: BlockNumber,
+		report_state: DungeonReportState,
+	},
+	Closed,
+}
+
+/// The info of a dungeon instance
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug)]
 pub struct DungeonInstance<
 	DungeonId: Encode + Decode + Clone + Debug + Eq + PartialEq,
+	AccountId: Encode + Decode + Clone + Eq + PartialEq,
+	BlockNumber: Encode + Decode + Clone + Eq + PartialEq,
 > {
 	/// the id of dungeon
 	id: DungeonId,
+	player: AccountId,
+	created_at: BlockNumber,
+	status: DungeonInstanceStatus<AccountId, BlockNumber>,
 }
 
 // The main implementation block for the module.

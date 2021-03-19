@@ -34,13 +34,20 @@ impl ManagerAccessor<u64> for () {
 	}
 }
 
+pub trait RandomHash<Hash> {
+	fn generate() -> Hash;
+}
+impl RandomHash<u32> for () {
+	fn generate() -> u32 { 0 }
+}
+
 pub trait RandomNumber<T> {
-	fn generate_random(seed: T) -> T;
-	fn generate_random_in_range(total: T) -> T;
+	fn generate_by_seed(seed: T) -> T;
+	fn generate_in_range(total: T) -> T;
 }
 impl RandomNumber<u32> for () {
-	fn generate_random(_: u32) -> u32 { 0 }
-	fn generate_random_in_range(_: u32) -> u32 { 0 }
+	fn generate_by_seed(_: u32) -> u32 { 0 }
+	fn generate_in_range(_: u32) -> u32 { 0 }
 }
 
 // some thing with life
