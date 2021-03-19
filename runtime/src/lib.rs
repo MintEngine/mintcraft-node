@@ -303,6 +303,11 @@ impl mc_cultivate::Config for Runtime {
 	type RandomNumber = Nature;
 }
 
+parameter_types! {
+	pub const TicketClosingGap: u32 = 1_000;
+	pub const TicketPlayingGap: u32 = 1_000;
+}
+
 impl mc_dungeons::Config for Runtime {
 	type Event = Event;
 	type DungeonId = u32;
@@ -313,6 +318,8 @@ impl mc_dungeons::Config for Runtime {
 	type RandomNumber = Nature;
 	type RandomHash = Nature;
 	type FeaturedAssets = FeaturedAssets;
+	type TicketClosingGap = TicketClosingGap;
+	type TicketPlayingGap = TicketPlayingGap;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

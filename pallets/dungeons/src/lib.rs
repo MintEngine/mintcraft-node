@@ -4,7 +4,7 @@ use sp_std::{fmt::Debug, prelude::*};
 use sp_runtime::{
 	RuntimeDebug, Percent,
 	traits::{
-		AtLeast32BitUnsigned,
+		Hash, AtLeast32BitUnsigned,
 		// Saturating, CheckedSub, CheckedAdd,
 	},
 };
@@ -13,7 +13,7 @@ use frame_support::{
 		Currency, ReservableCurrency
 	},
 };
-use codec::{Encode, Decode, HasCompact};
+use codec::{Encode, Decode, HasCompact, EncodeLike};
 use mc_support::{
 	primitives::{ DungeonReportState },
 	traits::{
@@ -51,7 +51,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The arithmetic type of dungeon identifier.
-		type DungeonId: Member + Parameter + Default + Copy + HasCompact;
+		type DungeonId: EncodeLike<Self::Hash> + Member + Parameter + Default + Copy + HasCompact;
 
 		/// The units in which we record balances.
 		type Balance: Member + Parameter + AtLeast32BitUnsigned + Default + Copy;
@@ -73,6 +73,12 @@ pub mod pallet {
 
 		/// The featured asset module
 		type FeaturedAssets: FeaturedAssets<Self::AccountId>;
+
+		/// blocks for closing after ticket bought
+		type TicketClosingGap: Get<Self::BlockNumber>;
+
+		/// blocks for closing after playing
+		type TicketPlayingGap: Get<Self::BlockNumber>;
 	}
 
 	#[pallet::hooks]
@@ -173,12 +179,33 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			// TODO
+			ensure!(Dungeons::<T>::contains_key(id), Error::<T>::Unknown);
 
+			let dungeon = Dungeons::<T>::get(id).ok_or(Error::<T>::Unknown)?;
+
+			// ensure ticket price
+			T::Currency::reserve(&who, dungeon.ticket_price)?;
+
+			// now
+			let current_block = frame_system::Module::<T>::block_number();
+
+			// build instance
+			let ins = DungeonInstance {
+				id: id,
+				player: who.clone(),
+				created_at: current_block,
+				status: DungeonInstanceStatus::Booked{ close_due: current_block + T::TicketClosingGap::get() },
+			};
+			let ticket_id = T::Hashing::hash_of(&ins);
+			// insert new instance
+			DungeonInstances::<T>::insert(id, ins);
+
+			Self::deposit_event(Event::DungeonTicketBought(id, who, ticket_id));
 			Ok(().into())
 		}
 
 		/// begin a dungeon instance
+		/// transfer balance, issue assets, update status
 		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
 		pub(super) fn start(
 			origin: OriginFor<T>,
@@ -238,8 +265,8 @@ pub mod pallet {
 		DungeonInfoModified(T::DungeonId),
 		/// Some dungeon's report ranks were modified. \[dungeon_id\]
 		DungeonReportRanksModified(T::DungeonId),
-		/// a dungeon instance ticket bought. \[dungeon_id, player_id, server_id, ticket_id\]
-		DungeonTicketBought(T::DungeonId, T::AccountId, T::AccountId, T::Hash),
+		/// a dungeon instance ticket bought. \[dungeon_id, player_id, ticket_id\]
+		DungeonTicketBought(T::DungeonId, T::AccountId, T::Hash),
 		/// a dungeon started. \[dungeon_id, player_id, server_id, ticket_id\]
 		DungeonStarted(T::DungeonId, T::AccountId, T::AccountId, T::Hash),
 		/// a dungeon ended. \[dungeon_id, player_id, server_id, ticket_id\]
