@@ -55,11 +55,11 @@ pub mod pallet {
 		/// The currency mechanism.
 		type Currency: ReservableCurrency<Self::AccountId>;
 
-		/// Something that provides randomness in the runtime.
-		type Randomness: Randomness<Self::Hash>;
-
 		/// The manager origin.
 		type ManagerOrigin: EnsureOrigin<Self::Origin>;
+
+		/// Something that provides randomness in the runtime.
+		type Randomness: Randomness<Self::Hash>;
 
 		/// Number of time we should try to generate a random number that has no modulo bias.
 		/// The larger this number, the more potential computation is used for picking the winner,
