@@ -10,7 +10,8 @@ use sp_runtime::{
 };
 use frame_support::{
 	traits::{
-		Currency, ReservableCurrency
+		Currency, ReservableCurrency,
+		ExistenceRequirement::{KeepAlive},
 	},
 };
 use codec::{Encode, Decode, HasCompact, EncodeLike};
@@ -27,7 +28,7 @@ type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Con
 
 type AssetAmountPair<T> = (
 	<<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::AssetId,
-	<<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::Amount,
+	<<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::Balance,
 );
 
 #[frame_support::pallet]
@@ -211,11 +212,35 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			ticket_id: T::Hash,
 		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
+			let server = ensure_signed(origin)?;
 
-			// TODO
+			// ensure dungeon instance exists
+			DungeonInstances::<T>::try_mutate_exists(ticket_id, |maybe_instance| -> DispatchResultWithPostInfo {
+				let ins = maybe_instance.as_mut().ok_or(Error::<T>::UnknownInstance)?;
+				let dungeon = Dungeons::<T>::get(ins.id).ok_or(Error::<T>::Unknown)?;
 
-			Ok(().into())
+				// Step.1 unreserve player's balance
+				T::Currency::unreserve(&ins.player, dungeon.ticket_price);
+
+				// Step.2 transfer player's balance to server
+				let _ = T::Currency::transfer(&ins.player, &server, dungeon.ticket_price, KeepAlive)?;
+
+				// Step.3 server mint asset to it self.
+				for (asset_id, amount) in dungeon.provide_assets.iter() {
+					T::FeaturedAssets::mint(*asset_id, &server, *amount)?;
+				}
+
+				// Step.4 set instance status
+				let current_block = frame_system::Module::<T>::block_number(); // now block
+				ins.status = DungeonInstanceStatus::Started {
+					server: server.clone(),
+					close_due: current_block + T::TicketPlayingGap::get(),
+				};
+
+				// send started event
+				Self::deposit_event(Event::DungeonStarted(ins.id, ins.player.clone(), server, ticket_id));
+				Ok(().into())
+			})
 		}
 
 		/// end a dungeon instance
@@ -225,7 +250,7 @@ pub mod pallet {
 			ticket_id: T::Hash,
 			result: DungeonReportState,
 		) -> DispatchResultWithPostInfo {
-			let who = ensure_signed(origin)?;
+			let server = ensure_signed(origin)?;
 
 			// TODO
 
@@ -278,6 +303,7 @@ pub mod pallet {
 		DungeonExists,
 		AssetNotUsed,
 		Unknown,
+		UnknownInstance,
 	}
 }
 
