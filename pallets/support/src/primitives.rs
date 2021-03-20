@@ -1,8 +1,8 @@
 use sp_runtime::{
 	Percent, RuntimeDebug,
-	// traits::{
-	// 	AtLeast32BitUnsigned, Zero, StaticLookup, Saturating, CheckedSub, CheckedAdd,
-	// }
+	traits::{
+		AtLeast32BitUnsigned, // Zero, StaticLookup, Saturating, CheckedSub, CheckedAdd,
+	}
 };
 use sp_std::prelude::*;
 
@@ -199,13 +199,13 @@ impl Default for DungeonReportState {
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
 pub struct AssetFeature {
 	/// The level of this asset
-	destiny: FeatureDestinyRank,
+	pub destiny: FeatureDestinyRank,
 	/// The elements info of this asset
-	elements: FeatureElements,
+	pub elements: FeatureElements,
 	/// The 'saturation' of this asset
-	saturation: FeatureRankedLevel,
+	pub saturation: FeatureRankedLevel,
 	/// The 'lightness' of this asset
-	lightness: FeatureLevel
+	pub lightness: FeatureLevel
 }
 
 impl AssetFeature {
@@ -225,26 +225,41 @@ impl AssetFeature {
 	}
 }
 
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug)]
+pub enum UniqueAssetCategory {
+	Equipment,
+}
+impl Default for UniqueAssetCategory {
+	fn default() -> Self { Self::Equipment }
+}
+
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
 pub struct UniqueAssetInfo<
 	FormulaId: Encode + Decode + Clone + Default + Eq + PartialEq,
 	BlockNumber: Encode + Decode + Default + Eq + PartialEq,
 > {
-    name: Vec<u8>,
-    formula_id: FormulaId,
-	mint_at: BlockNumber,
+    pub name: Vec<u8>,
+    pub formula_id: FormulaId,
+	pub mint_at: BlockNumber,
 }
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
 pub struct Formula<
 	FormulaId: Encode + Decode + Clone + Eq + PartialEq,
+	Balance: Encode + Decode + AtLeast32BitUnsigned + Default + Copy,
 > {
 	/// the id of formula
-	id: FormulaId,
+	pub id: FormulaId,
 	/// the name of formula
-	name: Vec<u8>,
+	pub name: Vec<u8>,
+	/// the category of formula
+	pub category: UniqueAssetCategory,
 	/// required rank
-	required_rank: FeatureDestinyRank,
+	pub required_rank: FeatureDestinyRank,
+	/// required minimum elements
+	pub minimum_elements: Vec<(FeatureHue, Balance)>,
+	/// required maximum elements
+	pub maximum_elements: Vec<(FeatureHue, Balance)>,
 	/// success rate
-	rate_of_success: Percent,
+	pub rate_of_success: Percent,
 }

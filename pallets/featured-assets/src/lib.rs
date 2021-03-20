@@ -394,7 +394,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::AssetId,
 			beneficiary: <T::Lookup as StaticLookup>::Source,
-			#[pallet::compact] amount: T::Balance
+			amount: T::Balance
 		) -> DispatchResultWithPostInfo {
 			let origin = ensure_signed(origin)?;
 
@@ -427,7 +427,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::AssetId,
 			who: <T::Lookup as StaticLookup>::Source,
-			#[pallet::compact] amount: T::Balance
+			amount: T::Balance
 		) -> DispatchResultWithPostInfo {
 			let origin = ensure_signed(origin)?;
 
@@ -463,7 +463,7 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::AssetId,
 			target: <T::Lookup as StaticLookup>::Source,
-			#[pallet::compact] amount: T::Balance
+			amount: T::Balance
 		) -> DispatchResultWithPostInfo {
 			let origin = ensure_signed(origin)?;
 			ensure!(!amount.is_zero(), Error::<T>::AmountZero);
@@ -499,7 +499,7 @@ pub mod pallet {
 			#[pallet::compact] id: T::AssetId,
 			source: <T::Lookup as StaticLookup>::Source,
 			dest: <T::Lookup as StaticLookup>::Source,
-			#[pallet::compact] amount: T::Balance,
+			amount: T::Balance,
 		) -> DispatchResultWithPostInfo {
 			let origin = ensure_signed(origin)?;
 

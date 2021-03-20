@@ -115,7 +115,6 @@ Setup in 'Developers' when using [https://polkadot.js.org](https://polkadot.js.o
   },
   "DungeonInstanceStatus": {
       "_enum": {
-          "Closed": null,
           "Booked": {
               "close_due": "BlockNumber"
           },
@@ -127,14 +126,15 @@ Setup in 'Developers' when using [https://polkadot.js.org](https://polkadot.js.o
               "server": "AccountId",
               "report_at": "BlockNumber",
               "report_state": "DungeonReportState"
-          }
+          },
+          "Closed": null
       }
   },
   "DungeonInstance": {
       "id": "DungeonId",
       "player": "AccountId",
       "created_at": "BlockNumber",
-      "status": "DungeonInstanceStatus<AccountId, BlockNumber>"
+      "status": "DungeonInstanceStatus"
   },
   "FormulaId": "u32",
   "Formula": {

@@ -9,19 +9,19 @@ use sp_runtime::{
 		// Saturating, CheckedSub, CheckedAdd,
 	},
 };
-use frame_support::{
-	ensure,
-	traits::{
-		Randomness, //, Currency, ReservableCurrency
-	},
-};
-use codec::{Encode, Decode, HasCompact};
+use codec::{HasCompact};
 pub use pallet::*;
 
 use mc_support::{
-	primitives::{Formula},
-	traits::{ManagerAccessor,RandomNumber, FeaturedAssets, UniqueAssets},
+	primitives::{
+		FeatureDestinyRank, Formula
+	},
+	traits::{
+		ManagerAccessor, RandomNumber, FeaturedAssets, UniqueAssets,
+	},
 };
+
+type AssetBalance<T> = <<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -71,32 +71,41 @@ pub mod pallet {
 		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
 		pub fn create_formula(
 			origin: OriginFor<T>,
-			#[pallet::compact] id: T::FormulaId,
+			formula: Formula<T::FormulaId, AssetBalance<T>>,
 		) -> DispatchResultWithPostInfo {
 			// T::ManagerOrigin::ensure_origin(origin)?;
 			let origin = ensure_signed(origin)?;
 			ensure!(T::FormulaManager::is_admin(&origin), Error::<T>::NoPermission);
 
-			// TODO
+			let formula_id = formula.id;
+			ensure!(!Formulas::<T>::contains_key(&formula_id), Error::<T>::IdExists);
 
-			Self::deposit_event(Event::FormulaCreated(id));
+			// create formulas
+			Formulas::<T>::insert(&formula_id, formula);
+
+			Self::deposit_event(Event::FormulaCreated(formula_id));
 			Ok(().into())
 		}
 
 		/// modify a formula
 		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
-		pub fn modify_formula(
+		pub fn modify_formula_required_rank(
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::FormulaId,
+			required_rank: FeatureDestinyRank,
 		) -> DispatchResultWithPostInfo {
 			// T::ManagerOrigin::ensure_origin(origin)?;
 			let origin = ensure_signed(origin)?;
 			ensure!(T::FormulaManager::is_admin(&origin), Error::<T>::NoPermission);
 
-			// TODO
+			Formulas::<T>::try_mutate(id, |maybe| {
+				let formula = maybe.as_mut().ok_or(Error::<T>::Unknown)?;
 
-			Self::deposit_event(Event::FormulaModified(id));
-			Ok(().into())
+				formula.required_rank = required_rank.clone();
+
+				Self::deposit_event(Event::FormulaRequiredRankModified(id, required_rank));
+				Ok(().into())
+			})
 		}
 
 		/// execute a formula
@@ -120,25 +129,30 @@ pub mod pallet {
 		_,
 		Blake2_128Concat,
 		T::FormulaId,
-		Formula<T::FormulaId>,
-		ValueQuery,
+		Formula<T::FormulaId, AssetBalance<T>>
 	>;
 
 	#[pallet::event]
-	#[pallet::metadata(T::AccountId = "AccountId",T::FormulaId = "FormulaId")]
+	#[pallet::metadata(T::AccountId = "AccountId", T::FormulaId = "FormulaId")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Some formula were created. \[formula_id\]
 		FormulaCreated(T::FormulaId),
-		/// Some formula were modified. \[formula_id\]
-		FormulaModified(T::FormulaId),
-		/// Some formula were executed. \[formula_id, who, commodity_id\]
+		/// Some formula were modified. \[formula_id, required_rank\]
+		FormulaRequiredRankModified(T::FormulaId, FeatureDestinyRank),
+		/// Some formula were executed. \[formula_id, who\]
 		FormulaExecuted(T::FormulaId, T::AccountId, T::Hash),
+		/// Unique asset were minted. \[formula_id, who\]
+		MintUniqueAssetSucceeded(T::FormulaId, T::AccountId),
+		/// Unique asset were minted. \[formula_id, who, commodity_id\]
+		MintUniqueAssetFailed(T::FormulaId, T::AccountId, T::Hash),
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		NoPermission,
+		IdExists,
+		Unknown,
 	}
 }
 
