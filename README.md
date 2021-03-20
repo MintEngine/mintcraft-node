@@ -123,7 +123,7 @@ Setup in 'Developers' when using [https://polkadot.js.org](https://polkadot.js.o
       "id": "DungeonId",
       "player": "AccountId",
       "created_at": "BlockNumber",
-      "status": "DungeonInstanceStatus<AccountId, BlockNumber>",
+      "status": "DungeonInstanceStatus<AccountId, BlockNumber>"
   },
   "FormulaId": "u32",
   "Formula": {
