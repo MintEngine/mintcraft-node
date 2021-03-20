@@ -14,7 +14,7 @@ use frame_support::{
 		ExistenceRequirement::{KeepAlive},
 	},
 };
-use codec::{Encode, Decode, HasCompact, EncodeLike};
+use codec::{Encode, Decode, HasCompact, FullCodec};
 use mc_support::{
 	primitives::{ DungeonReportState },
 	traits::{
@@ -52,7 +52,7 @@ pub mod pallet {
 		type Event: From<Event<Self>> + IsType<<Self as frame_system::Config>::Event>;
 
 		/// The arithmetic type of dungeon identifier.
-		type DungeonId: EncodeLike<Self::Hash> + Member + Parameter + Default + Copy + HasCompact;
+		type DungeonId: Member + Parameter + Default + Copy + HasCompact + FullCodec;
 
 		/// The units in which we record balances.
 		type Balance: Member + Parameter + AtLeast32BitUnsigned + Default + Copy;
@@ -197,9 +197,9 @@ pub mod pallet {
 				created_at: current_block,
 				status: DungeonInstanceStatus::Booked{ close_due: current_block + T::TicketClosingGap::get() },
 			};
-			let ticket_id = T::Hashing::hash_of(&ins);
+			let ticket_id = T::Hashing::hash_of(&(id.encode(), &ins.player, &ins.created_at));
 			// insert new instance
-			DungeonInstances::<T>::insert(id, ins);
+			DungeonInstances::<T>::insert(ticket_id, ins);
 
 			Self::deposit_event(Event::DungeonTicketBought(id, who, ticket_id));
 			Ok(().into())
