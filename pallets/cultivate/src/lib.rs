@@ -1,27 +1,22 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use sp_std::{fmt::Debug, prelude::*};
-use sp_runtime::{
-	Percent,
-	traits::{
-		AtLeast32BitUnsigned, StaticLookup,
-		// Zero,
-		// Saturating, CheckedSub, CheckedAdd,
-	},
-};
+use sp_std::prelude::*;
+use sp_runtime::{Percent};
 use codec::{HasCompact};
 pub use pallet::*;
 
 use mc_support::{
 	primitives::{
-		FeatureDestinyRank, Formula, FeatureHue
+		FeatureDestinyRank, Formula, FeatureHue, UniqueAssetInfo
 	},
 	traits::{
 		ManagerAccessor, RandomNumber, FeaturedAssets, UniqueAssets,
 	},
 };
 
-pub type AssetIdOf<T> = <<T as Config>::UniqueAssets as UniqueAssets<<T as frame_system::Config>::AccountId>>::AssetId;
+pub type UniqueHash<T> = <<T as Config>::UniqueAssets as UniqueAssets<<T as frame_system::Config>::AccountId>>::AssetId;
+pub type UniqueAssetInfoOf<T> = <<T as Config>::UniqueAssets as UniqueAssets<<T as frame_system::Config>::AccountId>>::AssetInfo;
+pub type AssetIdOf<T> = <<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::AssetId;
 pub type AssetBalance<T> = <<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[frame_support::pallet]
@@ -164,9 +159,51 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			// TODO
+			Formulas::<T>::try_mutate(id, |maybe| {
+				let formula = maybe.as_mut().ok_or(Error::<T>::Unknown)?;
 
-			Ok(().into())
+				// let mut feature_amounts: Vec<(FeatureHue, AssetBalance<T>)> = Vec::new();
+				for (asset_id, amount) in use_assets.iter() {
+					ensure!(T::FeaturedAssets::is_in_using(*asset_id), Error::<T>::AssetNotUsed);
+					let current_asset_balance = T::FeaturedAssets::balance(*asset_id, who.clone());
+					ensure!(current_asset_balance >= *amount, Error::<T>::AssetNotEnough);
+
+					// burn all the assets
+					T::FeaturedAssets::burn(*asset_id, &who, *amount)?;
+
+					// calc feature amount
+					// let feature = T::FeaturedAssets::feature(*asset_id).unwrap();
+					// match feature.elements {
+					// 	FeatureElements::One(one) => {
+					// 	},
+					// 	FeatureElements::Two(one, two) => {
+					// 	},
+					// 	FeatureElements::Three(one, two, three) => {
+					// 	},
+					// 	FeatureElements::Four(one, two, three, four) => {
+					// 	},
+					// };
+				}
+				// Executed
+				Self::deposit_event(Event::FormulaExecuted(id, who.clone()));
+
+				// now
+				let current_block = frame_system::Module::<T>::block_number();
+
+				// FIXME we need better generate algorithm according to feature elements
+				let rand_value = T::RandomNumber::generate_in_range(100);
+				if formula.rate_of_success > Percent::from_percent(rand_value as u8) {
+					let hash = T::UniqueAssets::mint(&who, UniqueAssetInfo {
+						formula_id: id,
+						mint_at: current_block,
+						name: formula.name.clone(),
+					} as UniqueAssetInfoOf<T>)?;
+					Self::deposit_event(Event::MintUniqueAssetSucceeded(id, who, hash));
+				} else {
+					Self::deposit_event(Event::MintUniqueAssetFailed(id, who));
+				}
+				Ok(().into())
+			})
 		}
 	}
 
@@ -181,7 +218,7 @@ pub mod pallet {
 	>;
 
 	#[pallet::event]
-	#[pallet::metadata(T::AccountId = "AccountId", T::FormulaId = "FormulaId")]
+	#[pallet::metadata(T::AccountId = "AccountId", T::FormulaId = "FormulaId", UniqueHash<T> = "Hash")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Some formula were created. \[formula_id\]
@@ -193,11 +230,11 @@ pub mod pallet {
 		/// Some formula were modified. \[formula_id, percent\]
 		FormulaRateOfSuccessModified(T::FormulaId, Percent),
 		/// Some formula were executed. \[formula_id, who\]
-		FormulaExecuted(T::FormulaId, T::AccountId, T::Hash),
-		/// Unique asset were minted. \[formula_id, who\]
-		MintUniqueAssetSucceeded(T::FormulaId, T::AccountId),
+		FormulaExecuted(T::FormulaId, T::AccountId),
 		/// Unique asset were minted. \[formula_id, who, commodity_id\]
-		MintUniqueAssetFailed(T::FormulaId, T::AccountId, T::Hash),
+		MintUniqueAssetSucceeded(T::FormulaId, T::AccountId, UniqueHash<T>),
+		/// Mint asset failed. \[formula_id, who\]
+		MintUniqueAssetFailed(T::FormulaId, T::AccountId),
 	}
 
 	#[pallet::error]
@@ -205,6 +242,8 @@ pub mod pallet {
 		NoPermission,
 		IdExists,
 		Unknown,
+		AssetNotUsed,
+		AssetNotEnough,
 	}
 }
 

@@ -336,7 +336,7 @@ impl<T: Config> UniqueAssets<T::AccountId> for Pallet<T> {
 
     fn mint(
         owner_account: &T::AccountId,
-        commodity_info: <T>::CommodityInfo,
+        commodity_info: T::CommodityInfo,
     ) -> Result<T::Hash, DispatchError> {
         let commodity_id = T::Hashing::hash_of(&commodity_info);
 
