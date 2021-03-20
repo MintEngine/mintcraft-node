@@ -113,20 +113,23 @@ Setup in 'Developers' when using [https://polkadot.js.org](https://polkadot.js.o
     "provide_assets": "Vec<AssetAmountPair>",
     "report_ranks": "Vec<(DungeonReportState, Percent)>"
   },
+  "DungeonInstanceStatusBooked": {
+    "close_due": "BlockNumber"
+  },
+  "DungeonInstanceStatusStarted": {
+    "server": "AccountId",
+    "close_due": "BlockNumber"
+  },
+  "DungeonInstanceStatusEnded": {
+      "server": "AccountId",
+      "report_at": "BlockNumber",
+      "report_state": "DungeonReportState"
+  },
   "DungeonInstanceStatus": {
       "_enum": {
-          "Booked": {
-              "close_due": "BlockNumber"
-          },
-          "Started": {
-            "server": "AccountId",
-            "close_due": "BlockNumber"
-          },
-          "Ended": {
-              "server": "AccountId",
-              "report_at": "BlockNumber",
-              "report_state": "DungeonReportState"
-          },
+          "Booked": "DungeonInstanceStatusBooked",
+          "Started": "DungeonInstanceStatusStarted",
+          "Ended": "DungeonInstanceStatusEnded",
           "Closed": null
       }
   },
@@ -138,12 +141,19 @@ Setup in 'Developers' when using [https://polkadot.js.org](https://polkadot.js.o
   },
   "FormulaId": "u32",
   "Formula": {
-      "id": "FormulaId"
+    "id": "FormulaId",
+    "name": "Vec<u8>",
+    "category": "UniqueAssetCategory",
+    "required_rank": "FeatureDestinyRank",
+    "minimum_elements": "Vec<(FeatureHue, Balance)>",
+    "maximum_elements": "Vec<(FeatureHue, Balance)>",
+    "rate_of_success": "Percent"
   },
   "CommodityId": "Hash",
   "UniqueAssetInfo": {
     "name": "Vec<u8>",
-    "version": "Vec<u8>"
+    "formula_id": "FormulaId",
+    "mint_at": "BlockNumber"
   },
   "Commodity": {
     "id": "CommodityId",
