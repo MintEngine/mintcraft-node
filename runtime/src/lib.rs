@@ -311,6 +311,7 @@ impl mc_cultivate::Config for Runtime {
 parameter_types! {
 	pub const TicketClosingGap: u32 = 1_000;
 	pub const TicketPlayingGap: u32 = 1_000;
+	pub const AssetDistributionPercent: Percent = Percent.from_percent(90);
 }
 
 impl mc_dungeons::Config for Runtime {
@@ -325,6 +326,7 @@ impl mc_dungeons::Config for Runtime {
 	type FeaturedAssets = FeaturedAssets;
 	type TicketClosingGap = TicketClosingGap;
 	type TicketPlayingGap = TicketPlayingGap;
+	type AssetDistributionPercent = AssetDistributionPercent;
 }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.

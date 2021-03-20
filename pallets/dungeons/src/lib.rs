@@ -4,7 +4,7 @@ use sp_std::{fmt::Debug, prelude::*};
 use sp_runtime::{
 	RuntimeDebug, Percent,
 	traits::{
-		Hash, AtLeast32BitUnsigned,
+		Hash, AtLeast32BitUnsigned, Zero,
 		// Saturating, CheckedSub, CheckedAdd,
 	},
 };
@@ -80,6 +80,9 @@ pub mod pallet {
 
 		/// blocks for closing after playing
 		type TicketPlayingGap: Get<Self::BlockNumber>;
+
+		/// percent for asset distribution
+		type AssetDistributionPercent: Get<Percent>;
 	}
 
 	#[pallet::hooks]
@@ -302,12 +305,17 @@ pub mod pallet {
 				};
 
 				// Step.2 distribute asset to players according to result
+				let distribute_percent = T::AssetDistributionPercent::get();
 				for (asset_id, amount) in dungeon.provide_assets.iter() {
-					let player_amount: AssetBalance<T> = percent.mul_ceil(*amount);
-					let treasury_amount: AssetBalance<T> = *amount - player_amount;
+					let player_amount: AssetBalance<T> = distribute_percent.mul_ceil(percent.mul_ceil(*amount));
+					let treasury_amount: AssetBalance<T> = distribute_percent.mul_ceil(*amount - player_amount);
 					// FIXME 需要确保转账成功
-					T::FeaturedAssets::transfer(*asset_id, &server_id, &ins.player, player_amount)?;
-					T::FeaturedAssets::transfer(*asset_id, &server_id, &T::AssetAdmin::get_owner_id(), treasury_amount)?;
+					if !player_amount.is_zero() {
+						T::FeaturedAssets::transfer(*asset_id, &server_id, &ins.player, player_amount)?;
+					}
+					if !treasury_amount.is_zero() {
+						T::FeaturedAssets::transfer(*asset_id, &server_id, &T::AssetAdmin::get_owner_id(), treasury_amount)?;
+					}
 				}
 
 				// Step.2 set instance status
