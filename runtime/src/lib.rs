@@ -303,6 +303,7 @@ impl mc_cultivate::Config for Runtime {
 	type FormulaId = u32;
 	type ManagerOrigin = frame_system::EnsureRoot<AccountId>;
 	type RandomNumber = Nature;
+	type FormulaManager = Nature;
 	type FeaturedAssets = FeaturedAssets;
 	type UniqueAssets = Commodity;
 }

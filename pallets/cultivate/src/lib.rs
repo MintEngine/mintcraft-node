@@ -20,7 +20,7 @@ pub use pallet::*;
 
 use mc_support::{
 	primitives::{Formula},
-	traits::{RandomNumber, FeaturedAssets, UniqueAssets},
+	traits::{ManagerAccessor,RandomNumber, FeaturedAssets, UniqueAssets},
 };
 
 #[frame_support::pallet]
@@ -49,6 +49,9 @@ pub mod pallet {
 		/// The manager origin.
 		type ManagerOrigin: EnsureOrigin<Self::Origin>;
 
+		/// Asset Admin is outer module
+		type FormulaManager: ManagerAccessor<Self::AccountId>;
+
 		/// Something that provides randomness in the runtime.
 		type RandomNumber: RandomNumber<u32>;
 
@@ -70,7 +73,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::FormulaId,
 		) -> DispatchResultWithPostInfo {
-			T::ManagerOrigin::ensure_origin(origin)?;
+			// T::ManagerOrigin::ensure_origin(origin)?;
+			let origin = ensure_signed(origin)?;
+			ensure!(T::FormulaManager::is_admin(&origin), Error::<T>::NoPermission);
 
 			// TODO
 
@@ -84,7 +89,9 @@ pub mod pallet {
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::FormulaId,
 		) -> DispatchResultWithPostInfo {
-			T::ManagerOrigin::ensure_origin(origin)?;
+			// T::ManagerOrigin::ensure_origin(origin)?;
+			let origin = ensure_signed(origin)?;
+			ensure!(T::FormulaManager::is_admin(&origin), Error::<T>::NoPermission);
 
 			// TODO
 
@@ -131,8 +138,7 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
-		/// Error names should be descriptive.
-		NoneValue,
+		NoPermission,
 	}
 }
 
