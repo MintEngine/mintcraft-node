@@ -4,7 +4,10 @@
 //! ## Overview
 //! All Traits
 //!
-// use sp_std::prelude::*;
+use sp_std::{
+	fmt::Debug,
+	hash::Hash,
+};
 use sp_runtime::{
 	traits::{ AtLeast32BitUnsigned },
 };
@@ -112,9 +115,9 @@ pub trait FeaturedAssets<AccountId> {
 /// and assets with different IDs **must not** have equivalent attributes.
 pub trait UniqueAssets<AccountId> {
 	/// The type used to identify unique assets.
-	type AssetId;
+	type AssetId: Encode + Decode + Hash + Eq + PartialEq + Member + Ord;
 	/// The attributes that distinguish unique assets.
-	type AssetInfo;
+	type AssetInfo: Encode + Decode + Clone + Debug;
 	/// The maximum number of this type of asset that may exist (minted - burned).
 	type AssetLimit: Get<u128>;
 	/// The maximum number of this type of asset that any single account may own.

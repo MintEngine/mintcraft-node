@@ -274,6 +274,7 @@ impl mc_nft::Config for Runtime {
 impl mc_actor::Config for Runtime {
 	type Event = Event;
 	type ActorLifeTime = DemoActor;
+	type UniqueAssets = Commodity;
 }
 
 impl mc_implication::Config for Runtime {
