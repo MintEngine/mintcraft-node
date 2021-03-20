@@ -18,8 +18,9 @@ use frame_support::{
 use codec::{Encode, Decode, HasCompact};
 pub use pallet::*;
 
-use mc_support::traits::{
-	RandomNumber, FeaturedAssets, UniqueAssets,
+use mc_support::{
+	primitives::{Formula},
+	traits::{RandomNumber, FeaturedAssets, UniqueAssets},
 };
 
 #[frame_support::pallet]
@@ -124,7 +125,8 @@ pub mod pallet {
 		FormulaCreated(T::FormulaId),
 		/// Some formula were modified. \[formula_id\]
 		FormulaModified(T::FormulaId),
-		FormulaExecuted(T::FormulaId, T::AccountId)
+		/// Some formula were executed. \[formula_id, who, commodity_id\]
+		FormulaExecuted(T::FormulaId, T::AccountId, T::Hash),
 	}
 
 	#[pallet::error]
@@ -132,14 +134,6 @@ pub mod pallet {
 		/// Error names should be descriptive.
 		NoneValue,
 	}
-}
-
-#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
-pub struct Formula<
-	FormulaId: Encode + Decode + Clone + Debug + Eq + PartialEq,
-> {
-	/// the id of formula
-	id: FormulaId,
 }
 
 // The main implementation block for the module.

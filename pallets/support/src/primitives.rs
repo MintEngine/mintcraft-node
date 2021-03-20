@@ -226,7 +226,25 @@ impl AssetFeature {
 }
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
-pub struct UniqueAssetInfo {
+pub struct UniqueAssetInfo<
+	FormulaId: Encode + Decode + Clone + Default + Eq + PartialEq,
+	BlockNumber: Encode + Decode + Default + Eq + PartialEq,
+> {
     name: Vec<u8>,
-    version: Vec<u8>,
+    formula_id: FormulaId,
+	mint_at: BlockNumber,
+}
+
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default)]
+pub struct Formula<
+	FormulaId: Encode + Decode + Clone + Eq + PartialEq,
+> {
+	/// the id of formula
+	id: FormulaId,
+	/// the name of formula
+	name: Vec<u8>,
+	/// required rank
+	required_rank: FeatureDestinyRank,
+	/// success rate
+	rate_of_success: Percent,
 }

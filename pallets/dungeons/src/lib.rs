@@ -97,11 +97,13 @@ pub mod pallet {
 			ticket_price: BalanceOf<T>,
 			provide_assets: Vec<AssetAmountPair<T>>,
 		) -> DispatchResultWithPostInfo {
-			T::ManagerOrigin::ensure_origin(origin)?;
+			// T::ManagerOrigin::ensure_origin(origin)?;
+			let origin = ensure_signed(origin)?;
+			ensure!(T::AssetAdmin::is_admin(&origin), Error::<T>::NoPermission);
 
 			ensure!(!Dungeons::<T>::contains_key(id), Error::<T>::DungeonExists);
 			let all_asset_in_using = provide_assets.iter().all(|one| T::FeaturedAssets::is_in_using(one.0));
-			ensure!(!all_asset_in_using, Error::<T>::AssetNotUsed);
+			ensure!(all_asset_in_using, Error::<T>::AssetNotUsed);
 
 			// create dungeon
 			Dungeons::<T>::insert(id, DungeonInfo {
@@ -121,7 +123,9 @@ pub mod pallet {
 			#[pallet::compact] id: T::DungeonId,
 			ticket_price: BalanceOf<T>,
 		) -> DispatchResultWithPostInfo {
-			T::ManagerOrigin::ensure_origin(origin)?;
+			// T::ManagerOrigin::ensure_origin(origin)?;
+			let origin = ensure_signed(origin)?;
+			ensure!(T::AssetAdmin::is_admin(&origin), Error::<T>::NoPermission);
 
 			Dungeons::<T>::try_mutate(id, |maybe_dungeon| {
 				let dungeon = maybe_dungeon.as_mut().ok_or(Error::<T>::UnknownDungeon)?;
@@ -141,7 +145,9 @@ pub mod pallet {
 			#[pallet::compact] id: T::DungeonId,
 			provide_assets: Vec<AssetAmountPair<T>>,
 		) -> DispatchResultWithPostInfo {
-			T::ManagerOrigin::ensure_origin(origin)?;
+			// T::ManagerOrigin::ensure_origin(origin)?;
+			let origin = ensure_signed(origin)?;
+			ensure!(T::AssetAdmin::is_admin(&origin), Error::<T>::NoPermission);
 
 			Dungeons::<T>::try_mutate(id, |maybe_dungeon| {
 				let dungeon = maybe_dungeon.as_mut().ok_or(Error::<T>::UnknownDungeon)?;
@@ -160,7 +166,9 @@ pub mod pallet {
 			#[pallet::compact] id: T::DungeonId,
 			report_ranks: Vec<(DungeonReportState, Percent)>,
 		) -> DispatchResultWithPostInfo {
-			T::ManagerOrigin::ensure_origin(origin)?;
+			// T::ManagerOrigin::ensure_origin(origin)?;
+			let origin = ensure_signed(origin)?;
+			ensure!(T::AssetAdmin::is_admin(&origin), Error::<T>::NoPermission);
 
 			Dungeons::<T>::try_mutate(id, |maybe_dungeon| {
 				let dungeon = maybe_dungeon.as_mut().ok_or(Error::<T>::UnknownDungeon)?;
@@ -355,6 +363,7 @@ pub mod pallet {
 
 	#[pallet::error]
 	pub enum Error<T> {
+		NoPermission,
 		DungeonExists,
 		AssetNotUsed,
 		UnknownDungeon,

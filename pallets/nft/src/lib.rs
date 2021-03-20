@@ -118,15 +118,10 @@ pub mod pallet {
 			commodity_info: T::CommodityInfo
 		) -> DispatchResultWithPostInfo {
             T::CommodityAdmin::ensure_origin(origin)?;
-            // ensure_signed(origin)?;
-            let commodity_id = <Self as UniqueAssets<_>>::mint(&owner_account, commodity_info)?;
-			let current_block = frame_system::Module::<T>::block_number();
-            // add exist info
-            NftExistInfo::<T>::insert(commodity_id, ExistInfo {
-                generated_at: current_block,
-                decayed_at: current_block + T::LifeTime::base_age(0),
-            });
-            Self::deposit_event(Event::Minted(commodity_id, owner_account.clone()));
+
+			// mint asset
+            <Self as UniqueAssets<_>>::mint(&owner_account, commodity_info)?;
+
             Ok(().into())
         }
 
@@ -372,6 +367,16 @@ impl<T: Config> UniqueAssets<T::AccountId> for Pallet<T> {
         });
         AccountForCommodity::<T>::insert(commodity_id, &owner_account);
 
+		// add exist info
+		let current_block = frame_system::Module::<T>::block_number();
+		NftExistInfo::<T>::insert(commodity_id, ExistInfo {
+			generated_at: current_block,
+			decayed_at: current_block + T::LifeTime::base_age(0),
+		});
+
+		// deposit event
+		Self::deposit_event(Event::Minted(commodity_id.clone(), owner_account.clone()));
+		// ok
         Ok(commodity_id)
     }
 
@@ -382,7 +387,7 @@ impl<T: Config> UniqueAssets<T::AccountId> for Pallet<T> {
             Error::<T>::NonexistentCommodity
         );
 
-        let burn_commodity = (*commodity_id, <T>::CommodityInfo::default());
+        let burn_commodity = (*commodity_id, T::CommodityInfo::default());
 
         Total::<T>::mutate(|total| *total -= 1);
         Burned::<T>::mutate(|total| *total += 1);
