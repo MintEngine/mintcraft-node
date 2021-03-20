@@ -57,6 +57,7 @@ pub use mc_cultivate;
 pub use mc_implication;
 pub use mc_nature;
 pub use mc_dungeons;
+pub use mc_support;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -265,7 +266,7 @@ parameter_types! {
 impl mc_nft::Config for Runtime {
 	type Event = Event;
 	type CommodityAdmin = frame_system::EnsureRoot<AccountId>;
-	type CommodityInfo = mc_nft::CommodityInfo;
+	type CommodityInfo = mc_support::primitives::UniqueAssetInfo;
 	type CommodityLimit = MaxNfts;
 	type UserCommodityLimit = MaxNftsPerUser;
 	type LifeTime = DemoItem;
@@ -302,6 +303,8 @@ impl mc_cultivate::Config for Runtime {
 	type FormulaId = u32;
 	type ManagerOrigin = frame_system::EnsureRoot<AccountId>;
 	type RandomNumber = Nature;
+	type FeaturedAssets = FeaturedAssets;
+	type UniqueAssets = Commodity;
 }
 
 parameter_types! {

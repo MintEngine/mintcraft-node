@@ -299,12 +299,6 @@ pub mod pallet {
 }
 
 #[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
-pub struct CommodityInfo {
-    name: Vec<u8>,
-    version: Vec<u8>,
-}
-
-#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
 pub struct MetaKeyValue {
     key: Vec<u8>,
     value: bool,

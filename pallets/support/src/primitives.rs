@@ -225,3 +225,8 @@ impl AssetFeature {
 	}
 }
 
+#[derive(Clone, Encode, Decode, Eq, PartialEq, RuntimeDebug, Default, Ord, PartialOrd)]
+pub struct UniqueAssetInfo {
+    name: Vec<u8>,
+    version: Vec<u8>,
+}

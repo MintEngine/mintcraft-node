@@ -19,7 +19,7 @@ use codec::{Encode, Decode, HasCompact};
 pub use pallet::*;
 
 use mc_support::traits::{
-	ManagerAccessor, RandomNumber
+	RandomNumber, FeaturedAssets, UniqueAssets,
 };
 
 #[frame_support::pallet]
@@ -50,6 +50,12 @@ pub mod pallet {
 
 		/// Something that provides randomness in the runtime.
 		type RandomNumber: RandomNumber<u32>;
+
+		/// The featured asset module
+		type FeaturedAssets: FeaturedAssets<Self::AccountId>;
+
+		/// NFT Assets
+		type UniqueAssets: UniqueAssets<Self::AccountId>;
 	}
 
 	#[pallet::hooks]
@@ -132,7 +138,7 @@ pub mod pallet {
 pub struct Formula<
 	FormulaId: Encode + Decode + Clone + Debug + Eq + PartialEq,
 > {
-	/// the id of dungeon
+	/// the id of formula
 	id: FormulaId,
 }
 
