@@ -21,7 +21,8 @@ use mc_support::{
 	},
 };
 
-type AssetBalance<T> = <<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::Balance;
+pub type AssetIdOf<T> = <<T as Config>::UniqueAssets as UniqueAssets<<T as frame_system::Config>::AccountId>>::AssetId;
+pub type AssetBalance<T> = <<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::Balance;
 
 #[frame_support::pallet]
 pub mod pallet {
@@ -159,6 +160,7 @@ pub mod pallet {
 		pub fn excuete_formula(
 			origin: OriginFor<T>,
 			#[pallet::compact] id: T::FormulaId,
+			use_assets: Vec<(AssetIdOf<T>, AssetBalance<T>)>,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
