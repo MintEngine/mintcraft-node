@@ -25,10 +25,10 @@ use mc_support::{
 pub use pallet::*;
 
 type BalanceOf<T> = <<T as Config>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
-
+type AssetBalance<T> = <<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::Balance;
 type AssetAmountPair<T> = (
 	<<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::AssetId,
-	<<T as Config>::FeaturedAssets as FeaturedAssets<<T as frame_system::Config>::AccountId>>::Balance,
+	AssetBalance<T>,
 );
 
 #[frame_support::pallet]
@@ -124,7 +124,7 @@ pub mod pallet {
 			T::ManagerOrigin::ensure_origin(origin)?;
 
 			Dungeons::<T>::try_mutate(id, |maybe_dungeon| {
-				let dungeon = maybe_dungeon.as_mut().ok_or(Error::<T>::Unknown)?;
+				let dungeon = maybe_dungeon.as_mut().ok_or(Error::<T>::UnknownDungeon)?;
 
 				let old_ticket_price = dungeon.ticket_price;
 				dungeon.ticket_price = ticket_price;
@@ -144,7 +144,7 @@ pub mod pallet {
 			T::ManagerOrigin::ensure_origin(origin)?;
 
 			Dungeons::<T>::try_mutate(id, |maybe_dungeon| {
-				let dungeon = maybe_dungeon.as_mut().ok_or(Error::<T>::Unknown)?;
+				let dungeon = maybe_dungeon.as_mut().ok_or(Error::<T>::UnknownDungeon)?;
 
 				dungeon.provide_assets = provide_assets;
 
@@ -163,7 +163,7 @@ pub mod pallet {
 			T::ManagerOrigin::ensure_origin(origin)?;
 
 			Dungeons::<T>::try_mutate(id, |maybe_dungeon| {
-				let dungeon = maybe_dungeon.as_mut().ok_or(Error::<T>::Unknown)?;
+				let dungeon = maybe_dungeon.as_mut().ok_or(Error::<T>::UnknownDungeon)?;
 
 				dungeon.report_ranks = report_ranks;
 
@@ -180,9 +180,9 @@ pub mod pallet {
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
 
-			ensure!(Dungeons::<T>::contains_key(id), Error::<T>::Unknown);
+			ensure!(Dungeons::<T>::contains_key(id), Error::<T>::UnknownDungeon);
 
-			let dungeon = Dungeons::<T>::get(id).ok_or(Error::<T>::Unknown)?;
+			let dungeon = Dungeons::<T>::get(id).ok_or(Error::<T>::UnknownDungeon)?;
 
 			// ensure ticket price
 			T::Currency::reserve(&who, dungeon.ticket_price)?;
@@ -217,7 +217,7 @@ pub mod pallet {
 			// ensure dungeon instance exists
 			DungeonInstances::<T>::try_mutate_exists(ticket_id, |maybe_instance| -> DispatchResultWithPostInfo {
 				let ins = maybe_instance.as_mut().ok_or(Error::<T>::UnknownInstance)?;
-				let dungeon = Dungeons::<T>::get(ins.id).ok_or(Error::<T>::Unknown)?;
+				let dungeon = Dungeons::<T>::get(ins.id).ok_or(Error::<T>::UnknownDungeon)?;
 
 				// now block
 				let current_block = frame_system::Module::<T>::block_number();
@@ -260,11 +260,56 @@ pub mod pallet {
 			ticket_id: T::Hash,
 			result: DungeonReportState,
 		) -> DispatchResultWithPostInfo {
-			let server = ensure_signed(origin)?;
+			let who = ensure_signed(origin)?;
 
-			// TODO
+			// ensure dungeon instance exists
+			DungeonInstances::<T>::try_mutate_exists(ticket_id, |maybe_instance| -> DispatchResultWithPostInfo {
+				let ins = maybe_instance.as_mut().ok_or(Error::<T>::UnknownInstance)?;
+				let dungeon = Dungeons::<T>::get(ins.id).ok_or(Error::<T>::UnknownDungeon)?;
 
-			Ok(().into())
+				// now block
+				let current_block = frame_system::Module::<T>::block_number();
+				// ensure current status is started
+				let server_id = match ins.status.clone() {
+					DungeonInstanceStatus::Started{
+						server,
+						close_due,
+					} => {
+						// 自动关闭过期的 dungeon instance
+						ensure!(close_due > current_block, Error::<T>::InstanceIsClosed);
+						ensure!(server.clone() == who, Error::<T>::InstanceServerShouldBeSame);
+						server
+					},
+					_ => return Err(Error::<T>::InstanceStatusShouldBeStarted.into()),
+				};
+
+				// Step.1 get percent by result
+				let percent = match result {
+					DungeonReportState::Lose => Percent::from_percent(0),
+					DungeonReportState::PerfectWin => Percent::from_percent(100),
+					DungeonReportState::ScoredWin(score) => score,
+				};
+
+				// Step.2 distribute asset to players according to result
+				for (asset_id, amount) in dungeon.provide_assets.iter() {
+					let player_amount: AssetBalance<T> = percent.mul_ceil(*amount);
+					let treasury_amount: AssetBalance<T> = *amount - player_amount;
+					// FIXME 需要确保转账成功
+					T::FeaturedAssets::transfer(*asset_id, &server_id, &ins.player, player_amount)?;
+					T::FeaturedAssets::transfer(*asset_id, &server_id, &T::AssetAdmin::get_owner_id(), treasury_amount)?;
+				}
+
+				// Step.2 set instance status
+				ins.status = DungeonInstanceStatus::Ended {
+					server: server_id.clone(),
+					report_at: current_block,
+					report_state: result,
+				};
+
+				// send started event
+				Self::deposit_event(Event::DungeonEnded(ins.id, ins.player.clone(), server_id, ticket_id, percent));
+				Ok(().into())
+			})
 		}
 	}
 
@@ -304,18 +349,20 @@ pub mod pallet {
 		DungeonTicketBought(T::DungeonId, T::AccountId, T::Hash),
 		/// a dungeon started. \[dungeon_id, player_id, server_id, ticket_id\]
 		DungeonStarted(T::DungeonId, T::AccountId, T::AccountId, T::Hash),
-		/// a dungeon ended. \[dungeon_id, player_id, server_id, ticket_id\]
-		DungeonEnded(T::DungeonId, T::AccountId, T::AccountId, T::Hash, DungeonReportState),
+		/// a dungeon ended. \[dungeon_id, player_id, server_id, ticket_id, score\]
+		DungeonEnded(T::DungeonId, T::AccountId, T::AccountId, T::Hash, Percent),
 	}
 
 	#[pallet::error]
 	pub enum Error<T> {
 		DungeonExists,
 		AssetNotUsed,
-		Unknown,
+		UnknownDungeon,
 		UnknownInstance,
 		InstanceIsClosed,
 		InstanceStatusShouldBeBooked,
+		InstanceStatusShouldBeStarted,
+		InstanceServerShouldBeSame,
 	}
 }
 

@@ -150,13 +150,15 @@ pub mod pallet {
 	// Pallets use events to inform users when important changes are made.
 	// https://substrate.dev/docs/en/knowledgebase/runtime/events
 	#[pallet::event]
-	#[pallet::metadata(T::AccountId = "AccountId")]
+	#[pallet::metadata(T::AccountId = "AccountId", T::Balance = "Balance")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Manager was added. \[who\]
 		ManagerAdded(T::AccountId),
 		/// Manager was removed. \[who\]
 		ManagerRemoved(T::AccountId),
+		/// Deposit Balance. \[amount\]
+		Deposit(T::Balance),
 	}
 
 	#[deprecated(note = "use `Event` instead")]

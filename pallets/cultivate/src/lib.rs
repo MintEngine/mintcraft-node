@@ -111,7 +111,7 @@ pub mod pallet {
 	>;
 
 	#[pallet::event]
-	#[pallet::metadata(T::AccountId = "AccountId")]
+	#[pallet::metadata(T::AccountId = "AccountId",T::FormulaId = "FormulaId")]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
 		/// Some formula were created. \[formula_id\]

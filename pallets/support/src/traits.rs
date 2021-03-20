@@ -2,11 +2,12 @@
 //! # Interface
 //!
 //! ## Overview
-//!
 //! All Traits
 //!
-
 // use sp_std::prelude::*;
+use sp_runtime::{
+	traits::{ AtLeast32BitUnsigned },
+};
 use frame_support::{
 	dispatch::{result::Result, DispatchError, DispatchResult, DispatchResultWithPostInfo},
 	traits::Get,
@@ -63,7 +64,7 @@ pub trait FeaturedAssets<AccountId> {
 	/// The type used to identify featured assets.
 	type AssetId: Parameter + Default + Copy;
 	type Amount: Parameter + Default + Copy;
-	type Balance: Parameter + Default + Copy;
+	type Balance: Member + Parameter + AtLeast32BitUnsigned + Default + Copy;
 
 	/// The usage of this type of asset
 	fn is_in_using(id: Self::AssetId) -> bool;
