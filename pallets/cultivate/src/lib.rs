@@ -2,7 +2,7 @@
 
 use sp_std::{fmt::Debug, prelude::*};
 use sp_runtime::{
-	RuntimeDebug, DispatchResult, DispatchError,
+	Percent,
 	traits::{
 		AtLeast32BitUnsigned, StaticLookup,
 		// Zero,
@@ -14,7 +14,7 @@ pub use pallet::*;
 
 use mc_support::{
 	primitives::{
-		FeatureDestinyRank, Formula
+		FeatureDestinyRank, Formula, FeatureHue
 	},
 	traits::{
 		ManagerAccessor, RandomNumber, FeaturedAssets, UniqueAssets,
@@ -108,6 +108,52 @@ pub mod pallet {
 			})
 		}
 
+		/// modify a formula
+		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
+		pub fn modify_formula_required_elements(
+			origin: OriginFor<T>,
+			#[pallet::compact] id: T::FormulaId,
+			minimum_elements: Vec<(FeatureHue, AssetBalance<T>)>,
+			maximum_elements: Vec<(FeatureHue, AssetBalance<T>)>,
+		) -> DispatchResultWithPostInfo {
+			// T::ManagerOrigin::ensure_origin(origin)?;
+			let origin = ensure_signed(origin)?;
+			ensure!(T::FormulaManager::is_admin(&origin), Error::<T>::NoPermission);
+
+			Formulas::<T>::try_mutate(id, |maybe| {
+				let formula = maybe.as_mut().ok_or(Error::<T>::Unknown)?;
+
+				// modify in formula
+				formula.minimum_elements = minimum_elements;
+				formula.maximum_elements = maximum_elements;
+
+				Self::deposit_event(Event::FormulaRequiredElementsModified(id));
+				Ok(().into())
+			})
+		}
+
+		/// modify a formula
+		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
+		pub fn modify_formula_rate_of_success(
+			origin: OriginFor<T>,
+			#[pallet::compact] id: T::FormulaId,
+			rate_of_success: Percent,
+		) -> DispatchResultWithPostInfo {
+			// T::ManagerOrigin::ensure_origin(origin)?;
+			let origin = ensure_signed(origin)?;
+			ensure!(T::FormulaManager::is_admin(&origin), Error::<T>::NoPermission);
+
+			Formulas::<T>::try_mutate(id, |maybe| {
+				let formula = maybe.as_mut().ok_or(Error::<T>::Unknown)?;
+
+				// modify in formula
+				formula.rate_of_success = rate_of_success.clone();
+
+				Self::deposit_event(Event::FormulaRateOfSuccessModified(id, rate_of_success));
+				Ok(().into())
+			})
+		}
+
 		/// execute a formula
 		#[pallet::weight((10_000 + T::DbWeight::get().writes(1), DispatchClass::Normal, Pays::No))]
 		pub fn excuete_formula(
@@ -140,6 +186,10 @@ pub mod pallet {
 		FormulaCreated(T::FormulaId),
 		/// Some formula were modified. \[formula_id, required_rank\]
 		FormulaRequiredRankModified(T::FormulaId, FeatureDestinyRank),
+		/// Some formula were modified. \[formula_id\]
+		FormulaRequiredElementsModified(T::FormulaId),
+		/// Some formula were modified. \[formula_id, percent\]
+		FormulaRateOfSuccessModified(T::FormulaId, Percent),
 		/// Some formula were executed. \[formula_id, who\]
 		FormulaExecuted(T::FormulaId, T::AccountId, T::Hash),
 		/// Unique asset were minted. \[formula_id, who\]
