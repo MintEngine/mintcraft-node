@@ -7,7 +7,8 @@ pub use pallet::*;
 
 use mc_support::{
 	primitives::{
-		FeatureDestinyRank, Formula, FeatureHue, UniqueAssetInfo
+		FeatureDestinyRank, Formula, FeatureHue,
+		// UniqueAssetInfo,
 	},
 	traits::{
 		ManagerAccessor, RandomNumber, FeaturedAssets, UniqueAssets,
@@ -188,17 +189,17 @@ pub mod pallet {
 				Self::deposit_event(Event::FormulaExecuted(id, who.clone()));
 
 				// now
-				let current_block = frame_system::Module::<T>::block_number();
+				// let current_block = frame_system::Module::<T>::block_number();
 
 				// FIXME we need better generate algorithm according to feature elements
 				let rand_value = T::RandomNumber::generate_in_range(100);
 				if formula.rate_of_success > Percent::from_percent(rand_value as u8) {
-					let hash = T::UniqueAssets::mint(&who, UniqueAssetInfo {
-						formula_id: id,
-						mint_at: current_block,
-						name: formula.name.clone(),
-					} as UniqueAssetInfoOf<T>)?;
-					Self::deposit_event(Event::MintUniqueAssetSucceeded(id, who, hash));
+					// let hash = T::UniqueAssets::mint(&who, UniqueAssetInfo {
+					// 	formula_id: id,
+					// 	mint_at: current_block,
+					// 	name: formula.name.clone(),
+					// } as UniqueAssetInfoOf<T>)?;
+					// Self::deposit_event(Event::MintUniqueAssetSucceeded(id, who, hash));
 				} else {
 					Self::deposit_event(Event::MintUniqueAssetFailed(id, who));
 				}
