@@ -84,7 +84,7 @@ Setup in 'Developers' when using [https://polkadot.js.org](https://polkadot.js.o
       "deposit": "Balance",
       "is_admin": "bool",
       "is_issuer": "bool",
-      "is_freezer": "bool",
+      "is_freezer": "bool"
   },
   "AssetAmountPair": {
       "asset_id": "AssetId",
