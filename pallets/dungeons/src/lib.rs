@@ -219,6 +219,17 @@ pub mod pallet {
 				let ins = maybe_instance.as_mut().ok_or(Error::<T>::UnknownInstance)?;
 				let dungeon = Dungeons::<T>::get(ins.id).ok_or(Error::<T>::Unknown)?;
 
+				// now block
+				let current_block = frame_system::Module::<T>::block_number();
+				// ensure current status is booked
+				match ins.status {
+					DungeonInstanceStatus::Booked{ close_due } => {
+						ensure!(close_due > current_block, Error::<T>::InstanceIsClosed);
+						// TODO 自动关闭过期的 dungeon instance
+					},
+					_ => return Err(Error::<T>::InstanceStatusShouldBeBooked.into()),
+				};
+
 				// Step.1 unreserve player's balance
 				T::Currency::unreserve(&ins.player, dungeon.ticket_price);
 
@@ -231,7 +242,6 @@ pub mod pallet {
 				}
 
 				// Step.4 set instance status
-				let current_block = frame_system::Module::<T>::block_number(); // now block
 				ins.status = DungeonInstanceStatus::Started {
 					server: server.clone(),
 					close_due: current_block + T::TicketPlayingGap::get(),
@@ -304,6 +314,8 @@ pub mod pallet {
 		AssetNotUsed,
 		Unknown,
 		UnknownInstance,
+		InstanceIsClosed,
+		InstanceStatusShouldBeBooked,
 	}
 }
 
