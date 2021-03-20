@@ -187,6 +187,7 @@ pub mod pallet {
 			#[pallet::compact] id: T::DungeonId,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			ensure!(!T::AssetAdmin::is_admin(&who), Error::<T>::NoPermission);
 
 			ensure!(Dungeons::<T>::contains_key(id), Error::<T>::UnknownDungeon);
 
@@ -221,6 +222,7 @@ pub mod pallet {
 			ticket_id: T::Hash,
 		) -> DispatchResultWithPostInfo {
 			let server = ensure_signed(origin)?;
+			ensure!(T::AssetAdmin::is_admin(&server), Error::<T>::NoPermission);
 
 			// ensure dungeon instance exists
 			DungeonInstances::<T>::try_mutate_exists(ticket_id, |maybe_instance| -> DispatchResultWithPostInfo {
@@ -269,6 +271,7 @@ pub mod pallet {
 			result: DungeonReportState,
 		) -> DispatchResultWithPostInfo {
 			let who = ensure_signed(origin)?;
+			ensure!(T::AssetAdmin::is_admin(&who), Error::<T>::NoPermission);
 
 			// ensure dungeon instance exists
 			DungeonInstances::<T>::try_mutate_exists(ticket_id, |maybe_instance| -> DispatchResultWithPostInfo {
