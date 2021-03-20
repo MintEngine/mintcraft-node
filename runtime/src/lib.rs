@@ -47,7 +47,7 @@ pub use pallet_timestamp::Call as TimestampCall;
 use pallet_transaction_payment::CurrencyAdapter;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
-pub use sp_runtime::{Perbill, Permill};
+pub use sp_runtime::{Perbill, Permill, Percent};
 
 /// Import local pallets.
 pub use mc_featured_assets;
@@ -311,7 +311,7 @@ impl mc_cultivate::Config for Runtime {
 parameter_types! {
 	pub const TicketClosingGap: u32 = 1_000;
 	pub const TicketPlayingGap: u32 = 1_000;
-	pub const AssetDistributionPercent: Percent = Percent.from_percent(90);
+	pub const AssetDistributionPercent: Percent = Percent::from_percent(90);
 }
 
 impl mc_dungeons::Config for Runtime {
