@@ -80,6 +80,17 @@ Setup in 'Developers' when using [https://polkadot.js.org](https://polkadot.js.o
     "saturation": "FeatureRankedLevel",
     "lightness": "FeatureLevel"
   },
+  "AssetDetails": {
+      "owner": "AccountId",
+      "supply": "Balance",
+      "deposit": "Balance",
+      "max_zombies": "u32",
+      "min_balance": "Balance",
+      "zombies": "u32",
+      "accounts": "u32",
+      "is_frozen": "bool",
+      "is_featured": "bool"
+  },
   "ManagerInfo": {
       "deposit": "Balance",
       "is_admin": "bool",
